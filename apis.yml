@@ -1,7 +1,13 @@
 aid: blng
 name: Blng
-description: Blng is a company surfaced as a portfolio company of speedinvest and added to the API Evangelist
-  network as a stub for enrichment. This profile is a lead awaiting the enrichment pipeline.
+description: BLNG is an AI-driven creative suite for the jewelry industry, giving jewelers,
+  designers, brands, and retailers tools to explore, refine, and present designs fast and
+  without compromise. Its Design product turns sketches, doodles, photos, illustrations, or
+  text prompts into photorealistic renderings on web and iOS; Studio transforms CAD models
+  into market-ready marketing photos and videos at scale; and Retail enables live, made-to-order
+  design in-store. BLNG is a Speedinvest portfolio company. It publishes a consumer/professional
+  application and product documentation, but no public developer API, SDK, or OpenAPI surface at
+  this time.
 url: https://raw.githubusercontent.com/api-evangelist/blng/refs/heads/main/apis.yml
 x-type: company
 x-source: vc-portfolio
@@ -9,11 +15,30 @@ x-backed-by:
 - speedinvest
 x-tier: stub
 x-tier-reason: portfolio-lead
+accessModel:
+  pricing: unknown
+  onboarding: unknown
+  trial: false
+  try_now: false
+  public: false
+  label: Unknown
+  confidence: low
+  source: []
+  generated: '2026-07-22'
+  method: derived
 specificationVersion: '0.20'
 created: '2026-07-17'
-modified: '2026-07-17'
+modified: '2026-07-18'
+image: https://cdn.sanity.io/images/4x3qe5zn/production/5354c7992cf9027bbe7400e2c4079f2c46e40cd8-4800x2520.png?w=1200&h=630
 tags:
 - Company
+- Jewelry
+- Generative AI
+- Design
+- Creative Tools
+- Rendering
+- Marketing
+- Retail
 apis: []
 maintainers:
 - FN: Kin Lane
@@ -21,5 +46,30 @@ maintainers:
 - FN: APIs.json
   email: info@apis.io
 common:
+- type: DomainSecurity
+  url: security/blng-domain-security.yml
 - type: Website
   url: https://blng.ai
+- type: Documentation
+  url: https://docs.blng.ai/
+- type: Pricing
+  url: https://blng.ai/pricing
+- type: Blog
+  url: https://blng.ai/news
+- type: Support
+  url: mailto:support@blng.ai
+- type: SignUp
+  url: https://app.blng.ai/
+- type: TermsOfService
+  url: https://blng.ai/terms
+- type: PrivacyPolicy
+  url: https://blng.ai/privacy-policy
+- type: LinkedIn
+  url: https://www.linkedin.com/company/blng-ai/
+- type: Instagram
+  url: https://www.instagram.com/blng.ai/
+x-enrichment:
+  date: '2026-07-19'
+  status: backfilled
+  pass: local-v1
+  note: backfilled from .gitignore signal + verified work evidence

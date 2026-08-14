@@ -5,30 +5,34 @@ description: BLNG is an AI-driven creative suite for the jewelry industry, givin
   without compromise. Its Design product turns sketches, doodles, photos, illustrations, or
   text prompts into photorealistic renderings on web and iOS; Studio transforms CAD models
   into market-ready marketing photos and videos at scale; and Retail enables live, made-to-order
-  design in-store. BLNG is a Speedinvest portfolio company. It publishes a consumer/professional
-  application and product documentation, but no public developer API, SDK, or OpenAPI surface at
-  this time.
+  design in-store. BLNG is a Speedinvest portfolio company. BLNG publishes no developer program,
+  but the web application is backed by three first-party REST APIs whose OpenAPI definitions are
+  served publicly and unauthenticated behind Swagger UI on its own hosts — a Journey API for
+  design journeys, prompts, image assets and 3D model generation, a User API for users,
+  workspaces, invitations, organizations and subscriptions, and a Billing API for Stripe-backed
+  products, checkout and subscription webhooks. All three authenticate with AWS Cognito bearer
+  tokens issued at auth.app.blng.ai.
 url: https://raw.githubusercontent.com/api-evangelist/blng/refs/heads/main/apis.yml
 x-type: company
 x-source: vc-portfolio
 x-backed-by:
 - speedinvest
-x-tier: stub
-x-tier-reason: portfolio-lead
 accessModel:
-  pricing: unknown
-  onboarding: unknown
+  pricing: freemium
+  onboarding: self-serve
   trial: false
   try_now: false
   public: false
-  label: Unknown
-  confidence: low
-  source: []
-  generated: '2026-07-22'
-  method: derived
-specificationVersion: '0.20'
+  label: Self-serve signup
+  confidence: medium
+  source:
+  - https://blng.ai/pricing
+  - https://billing.blng.ai/billing/products
+  generated: '2026-08-13'
+  method: probed
+specificationVersion: '0.21'
 created: '2026-07-17'
-modified: '2026-07-18'
+modified: '2026-08-13'
 image: https://cdn.sanity.io/images/4x3qe5zn/production/5354c7992cf9027bbe7400e2c4079f2c46e40cd8-4800x2520.png?w=1200&h=630
 tags:
 - Company
@@ -39,21 +43,99 @@ tags:
 - Rendering
 - Marketing
 - Retail
-apis: []
+- 3D Models
+- Image Generation
+- Workspaces
+- Billing
+- OpenAPI
+- AWS Cognito
+apis:
+- name: BLNG Journey API
+  description: >-
+    REST API behind the BLNG Design application that manages design and shopping journeys, the prompts
+    submitted against them, uploaded and generated image assets, chat prompts, design plans, and 3D model
+    generation and conversion. Supports free-text search over journeys, cursor pagination via nextPageKey,
+    and conditional GETs with ETag / If-None-Match. Authenticated with an AWS Cognito access or id token
+    as a bearer JWT.
+  humanURL: https://journeys.blng.ai/
+  baseURL: https://journeys.blng.ai/v2
+  tags:
+  - Design
+  - Generative AI
+  - Image Generation
+  - 3D Models
+  - Jewelry
+  properties:
+  - type: OpenAPI
+    url: openapi/blng-journey-api-openapi.yml
+  - type: APIReference
+    url: https://journeys.blng.ai/
+  - type: Overlay
+    url: overlays/blng-journey-api-overlay.yaml
+- name: BLNG User API
+  description: >-
+    REST API that manages BLNG users, roles and permissions, workspaces and workspace members, workspace
+    and subscription invitations, organizations, SSO configuration, marketing consent, tooltips, and user
+    subscriptions. Also exposes composite operations that create an organization, subscription and user in
+    a single call. Authenticated with AWS Cognito user tokens, plus a client-credentials machine token for
+    the billing integration.
+  humanURL: https://users.blng.ai/
+  baseURL: https://users.blng.ai
+  tags:
+  - Workspaces
+  - Users
+  - Organizations
+  - Subscriptions
+  - SSO
+  properties:
+  - type: OpenAPI
+    url: openapi/blng-user-api-openapi.yml
+  - type: APIReference
+    url: https://users.blng.ai/
+  - type: Overlay
+    url: overlays/blng-user-api-overlay.yaml
+- name: BLNG Billing API
+  description: >-
+    REST API that manages BLNG payment and billing — listing Stripe products and prices, creating Stripe
+    checkout sessions and customer-portal sessions, confirming checkout, and submitting enterprise
+    "contact sales" inquiries. Also declares three Stripe webhook receivers for checkout completion and
+    subscription update/delete. The product catalog endpoint answers unauthenticated.
+  humanURL: https://billing.blng.ai/
+  baseURL: https://billing.blng.ai
+  tags:
+  - Billing
+  - Payments
+  - Stripe
+  - Subscriptions
+  properties:
+  - type: OpenAPI
+    url: openapi/blng-billing-api-openapi.yml
+  - type: APIReference
+    url: https://billing.blng.ai/
+  - type: Overlay
+    url: overlays/blng-billing-api-overlay.yaml
 maintainers:
 - FN: Kin Lane
   email: kin@apievangelist.com
 - FN: APIs.json
   email: info@apis.io
 common:
+- type: AgenticAccess
+  url: agentic-access/blng-agentic-access.yml
 - type: DomainSecurity
   url: security/blng-domain-security.yml
 - type: Website
   url: https://blng.ai
 - type: Documentation
   url: https://docs.blng.ai/
+- type: GettingStarted
+  url: https://docs.blng.ai/getting-started/
+- type: HelpCenter
+  url: https://portal.blng.ai/
 - type: Pricing
   url: https://blng.ai/pricing
+- type: Plans
+  url: plans/blng-plans-pricing.yml
 - type: Blog
   url: https://blng.ai/news
 - type: Support
@@ -68,8 +150,45 @@ common:
   url: https://www.linkedin.com/company/blng-ai/
 - type: Instagram
   url: https://www.instagram.com/blng.ai/
+- type: GitHubOrganization
+  url: https://github.com/blng-ai
+- type: StatusPage
+  url: https://status.blng.ai/
+- type: Lifecycle
+  url: lifecycle/blng-lifecycle.yml
+- type: TrustCenter
+  url: https://trust.blng.ai/
+- type: TrustCenter
+  url: security/blng-trust-center.yml
+- type: Authentication
+  url: authentication/blng-authentication.yml
+- type: OAuthScopes
+  url: scopes/blng-scopes.yml
+- type: Conventions
+  url: conventions/blng-conventions.yml
+- type: ErrorCatalog
+  url: errors/blng-problem-types.yml
+- type: DataModel
+  url: data-model/blng-data-model.yml
+- type: Conformance
+  url: conformance/blng-conformance.yml
+- type: RateLimits
+  url: rate-limits/blng-rate-limits.yml
+- type: LLMsTxt
+  url: llms/blng-llms.txt
+- type: AgentSkill
+  url: skills/_index.yml
 x-enrichment:
-  date: '2026-07-19'
-  status: backfilled
+  date: '2026-08-13'
+  status: enriched
+  artifacts_added: 29
   pass: local-v1
-  note: backfilled from .gitignore signal + verified work evidence
+  note: >-
+    Round 1 recorded "no public developer API". That was wrong. STEP 0b contract discovery on the API
+    hosts named in the application's own Content-Security-Policy found three real, public, unauthenticated
+    OpenAPI definitions served behind Swagger UI at journeys.blng.ai, users.blng.ai and billing.blng.ai —
+    88 operations and 80 schemas. BLNG still publishes no developer program, no SDK, no MCP server and no
+    agent card.
+x-coverage:
+  state: covered
+  checked: '2026-08-13'

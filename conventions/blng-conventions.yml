@@ -1,0 +1,143 @@
+generated: '2026-08-13'
+method: derived
+source: openapi/blng-journey-api-openapi.yml, openapi/blng-user-api-openapi.yml, openapi/blng-billing-api-openapi.yml
+note: >-
+  Derived entirely from the three published OpenAPI definitions. BLNG publishes no API guide, no
+  developer portal, and no prose conventions page, so every statement below is read off the contracts
+  themselves. The three services do NOT share one convention set — the Journey API is materially more
+  modern than the User and Billing APIs (conditional requests, cursor pagination, structured error
+  codes) and that divergence is the most useful thing this artifact records.
+authentication:
+  style: bearer JWT
+  provider: AWS Cognito
+  schemes:
+  - name: bearerAuth
+    type: http bearer
+    format: JWT
+    note: Cognito access_token or id_token, pasted into the Swagger UI Authorize dialog.
+    apis: [Journey API, User API]
+  - name: cognitoUserAuth
+    type: oauth2 implicit
+    authorization_url: https://auth.app.blng.ai/oauth2/authorize
+    scopes: [email, profile, openid, aws.cognito.signin.user.admin]
+    apis: [Journey API, User API, Billing API]
+  - name: machineBearerToken
+    type: http bearer
+    grant: client_credentials
+    token_url: https://auth.app.blng.ai/oauth2/token
+    scope: blng/billing
+    note: Service-to-service token used by the Billing service to call the User API.
+    apis: [User API]
+  see: authentication/blng-authentication.yml
+idempotency:
+  supported: false
+  idempotency_key_header: null
+  note: >-
+    No Idempotency-Key (or equivalent) header is declared on any of the 88 operations, and no If-Match /
+    optimistic-concurrency precondition exists on any write. A retried POST — startNewJourney,
+    submitChatPrompt, createModel3D, createCheckoutSession — is not deduplicated by the contract. The
+    closest thing to a safe-retry primitive is the 423 Locked response on POST
+    /design/journeys/{journeyId}/generations, which reports operationInFlight and operationExpiresAt so a
+    client can wait rather than duplicate. NO `Idempotency` pointer is wired in apis.yml, because the
+    provider does not offer it.
+conditional_requests:
+  supported: true
+  scope: Journey API only
+  request_header: If-None-Match
+  response_header: ETag
+  not_modified_status: 304
+  cache_control: private (per-user; explicitly not cacheable by shared caches)
+  operations:
+  - getJourney
+  - getPromptsForJourney
+  - getDesignPlanForJourney
+  - listDesignPlansForJourney
+  note: >-
+    The spec warns that paginated prompt listings return a different ETag per page, and that the etag
+    for page 1 (no nextPageKey) changes when newer prompts arrive — so validators are page-scoped.
+pagination:
+  style: cursor / opaque token
+  scope: Journey API
+  request_params:
+    page_size: pageSize
+    cursor: nextPageKey
+  defaults:
+    pageSize: 10
+    max_pageSize: 100
+  response_field: nextPageKey
+  note: >-
+    The User and Billing APIs declare no pagination parameters at all — list operations such as GET
+    /invitations and GET /organizations return unbounded collections.
+search_and_filtering:
+  free_text_param: q
+  required_companion: fields
+  note: >-
+    On GET /journeys, `q` triggers an OpenSearch-backed fuzzy search and REQUIRES a `fields` list
+    (currently only `specifics.name` is allowed); without `q` the endpoint pages through DynamoDB.
+  filters:
+  - type (design | shopping)
+  - deleted
+field_expansion:
+  supported: false
+sparse_fieldsets:
+  supported: false
+  note: The `fields` parameter selects SEARCH targets, not response fields.
+metadata:
+  user_defined_metadata: false
+request_tracing:
+  request_id_header: null
+  note: >-
+    No request-id or correlation header is declared. All three services run on AWS API Gateway, which
+    returns apigw-requestid on responses, but the contract does not document it, so a client cannot rely
+    on it for support correlation.
+versioning:
+  style: path prefix
+  journey_api: /v2 (servers[] url is the relative path `/v2`; live base is https://journeys.blng.ai/v2)
+  user_api: unversioned (no servers[] block; live base is https://users.blng.ai)
+  billing_api: unversioned (no servers[] block; live base is https://billing.blng.ai)
+  info_versions:
+    Journey API: 2.0.0
+    User API: 1.0.0
+    Billing API: 1.0.0
+  in_spec_operation_versioning: >-
+    The Journey API carries an explicit v3 generation of one operation alongside the v2 one —
+    submitChatPrompt (POST .../chat-prompt) and submitChatPromptV3 (POST .../chat-prompt-v3) coexist,
+    with no deprecation flag on the older one.
+  see: lifecycle/blng-lifecycle.yml
+error_envelope:
+  shapes:
+  - shape: '{"message": "..."}'
+    scope: User API (components.schemas.ErrorResponse), and the AWS API Gateway defaults ({"message":"Unauthorized"}, {"message":"Not Found"})
+  - shape: '{"code": "...", "message": "..."}'
+    scope: Journey API 429 responses (code CONCURRENCY_LIMIT_EXCEEDED)
+  - shape: '{"ok": false, "generationId": "...", "imageAssetId": "...", "error": "..."}'
+    scope: Journey API model-generation failures (ModelGenerationErrorResponse)
+  rfc9457: false
+  problem_json_media_type: false
+  note: >-
+    Three different error shapes across three services, none of them application/problem+json. Every
+    response body in all three specs is application/json.
+  see: errors/blng-problem-types.yml
+rate_limit_signaling:
+  headers: none
+  exhaustion_status: 429
+  retry_after: false
+  see: rate-limits/blng-rate-limits.yml
+async_and_long_running:
+  pattern: 202 Accepted + poll
+  note: >-
+    Image operations and 3D model generation are asynchronous. POST /design/journeys/{journeyId}/image-ops
+    and the generation endpoints return 202 Accepted; the client then polls getModelGeneration /
+    listModelGenerations, or getDesignPlanForJourney, for terminal state. There is no callback, webhook,
+    or streaming completion signal for consumers.
+binary_assets:
+  pattern: presigned URL handoff
+  note: >-
+    Images, assets and 3D models never transit the API as bytes. createAssetUploadUrl,
+    generateImageUploadURL, getAssetDownloadUrl and generateImageDownloadUrl issue short-lived presigned
+    S3 URLs (journeys-images-prod.s3-accelerate.amazonaws.com per the application CSP) that the client
+    PUTs to or GETs from directly.
+content_types:
+  request: application/json
+  response: application/json
+media_types_note: No multipart, no XML, no form encoding anywhere in the three specs.

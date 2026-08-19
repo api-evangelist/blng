@@ -1,0 +1,69 @@
+overlay: 1.0.0
+info:
+  title: API Evangelist enhancements for the BLNG User API
+  version: 1.0.0
+x-provenance:
+  generated: '2026-08-13'
+  method: generated
+  source: openapi/blng-user-api-openapi.yml
+  note: >-
+    Extends openapi/blng-user-api-openapi.yml, the provider's own definition saved verbatim from
+    https://users.blng.ai/swagger.yaml. The original is never mutated. The most useful thing this overlay
+    adds is the missing servers[] block — the provider's definition declares no server at all, so a
+    generated client has nowhere to send a request.
+extends: openapi/blng-user-api-openapi.yml
+actions:
+- target: $.info
+  update:
+    contact:
+      name: BLNG Support
+      email: support@blng.ai
+      url: https://portal.blng.ai/
+    x-api-evangelist:
+      profile: https://apis.io/providers/blng
+      enriched: '2026-08-13'
+      spec_source: https://users.blng.ai/swagger.yaml
+      spec_source_status: 200
+      developer_program: none
+- target: $
+  update:
+    servers:
+    - url: https://users.blng.ai
+      description: >-
+        Production. The provider's definition declares no servers[] block; this base is confirmed by GET
+        https://users.blng.ai/users/{userId} returning 401 Unauthorized (path exists, protected) against
+        {"message":"Not Found"} on unmatched paths.
+- target: $.info
+  update:
+    x-deprecation-summary:
+      deprecated_operations: 17
+      of_total: 47
+      fully_deprecated_surfaces:
+      - Invitation (8 operations)
+      - Organization (4 operations)
+      - Composite (2 operations)
+      also_deprecated:
+      - POST /users/{userId}/subscriptions
+      - PUT /users/{userId}/subscriptions/{subscriptionId}
+      - POST /subscriptions
+      successor: >-
+        The live surface is the workspace model — /users/{userId}/workspaces and
+        /users/{userId}/workspaces/{workspaceId}/invitations. This mapping is an API Evangelist inference
+        from the contract; BLNG publishes no deprecation policy, no Sunset header and no removal date.
+      see: lifecycle/blng-lifecycle.yml
+- target: $.info
+  update:
+    x-conventions:
+      authentication: >-
+        AWS Cognito bearer JWT for user calls; a client_credentials machine token with scope blng/billing
+        for the billing service
+      idempotency: none
+      pagination: none — list operations return unbounded collections
+      rate_limit_headers: none
+      error_format: '{"message": "..."} (components.schemas.ErrorResponse); not RFC 9457'
+      sso: per-workspace SSO configuration via PUT /users/{userId}/workspaces/{workspaceId}/sso-config
+      artifacts:
+        conventions: conventions/blng-conventions.yml
+        errors: errors/blng-problem-types.yml
+        lifecycle: lifecycle/blng-lifecycle.yml
+        data_model: data-model/blng-data-model.yml

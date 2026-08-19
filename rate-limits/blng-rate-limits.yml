@@ -1,0 +1,75 @@
+generated: '2026-08-13'
+method: derived
+source: openapi/blng-journey-api-openapi.yml, openapi/blng-user-api-openapi.yml
+docs: https://docs.blng.ai/account-management/usage-limits-for-free-plan/
+note: >-
+  BLNG publishes no rate-limit documentation and no developer program, so there is no numeric
+  requests-per-window limit to record. What IS specified, in the specs themselves, is a per-user
+  CONCURRENCY limit on generation and a per-invitation resend cooldown, both surfaced as HTTP 429 with
+  a JSON body. No RateLimit-*, X-RateLimit-* or Retry-After response header is declared anywhere in the
+  three specs, so a client has no runtime signal to back off on beyond the status code and the code
+  string in the body. The only published consumption limits are plan quotas (files, history retention),
+  which are recorded in plans/blng-plans-pricing.yml, not here.
+limit_count: 2
+headers_published: false
+response_headers: []
+exhaustion_status: 429
+error_envelope:
+  fields:
+  - code
+  - message
+  example_code: CONCURRENCY_LIMIT_EXCEEDED
+limits:
+- name: Chat prompt concurrency
+  scope: per-user
+  window: concurrent
+  limit: null
+  limit_note: >-
+    Value is not published. The spec states only that a user has "a concurrency limit for chat prompts"
+    and returns 429 with code CONCURRENCY_LIMIT_EXCEEDED when it is exceeded. The pricing page markets
+    "Prompt Concurrency" and "Priority queue" as tier features, implying the ceiling varies by plan.
+  burst: null
+  status: 429
+  code: CONCURRENCY_LIMIT_EXCEEDED
+  retry_after_header: false
+  operations:
+  - submitChatPrompt
+  - submitChatPromptV3
+  paths:
+  - POST /design/journeys/{journeyId}/chat-prompt
+  - POST /design/journeys/{journeyId}/chat-prompt-v3
+  source: openapi/blng-journey-api-openapi.yml
+- name: Workspace invitation resend cooldown
+  scope: per-invitation
+  window: cooldown
+  limit: null
+  limit_note: >-
+    Cooldown duration is not published. The spec describes 429 as "Too many resend attempts for this
+    invitation (cooldown between successful invitation emails)".
+  burst: null
+  status: 429
+  retry_after_header: false
+  paths:
+  - POST /users/{userId}/workspaces/{workspaceId}/invitations/{invitationId}/resend
+  source: openapi/blng-user-api-openapi.yml
+related_backpressure:
+- name: Journey operation lock
+  status: 423
+  description: >-
+    Not a rate limit but the adjacent backpressure signal an agent must handle: starting a 3D model
+    generation while a chat prompt (or another generation) is in flight returns 423 Locked with
+    operationInFlight, operationOwnerId and operationExpiresAt, so the client knows when the lock frees.
+  paths:
+  - POST /design/journeys/{journeyId}/generations
+  source: openapi/blng-journey-api-openapi.yml
+- name: DynamoDB throughput
+  status: 503
+  description: Accepting a workspace invitation may return 503 on DynamoDB throughput limit; the spec instructs the client to retry.
+  paths:
+  - POST /users/{userId}/workspace-invitations/{invitationId}/accept
+  source: openapi/blng-user-api-openapi.yml
+x-evidence:
+- url: https://docs.blng.ai/account-management/usage-limits-for-free-plan/
+  http_status: 200
+  fetched: '2026-08-13'
+  finding: plan-level usage limits (3 active files, 24 hour history) — no API rate limits documented

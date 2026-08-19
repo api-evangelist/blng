@@ -1,0 +1,304 @@
+generated: '2026-08-13'
+method: derived
+source: openapi/blng-journey-api-openapi.yml, openapi/blng-user-api-openapi.yml, openapi/blng-billing-api-openapi.yml
+note: >-
+  Entity graph derived from components.schemas $ref links and id-reference fields across the three
+  specs. 80 schemas total (48 Journey, 27 User, 5 Billing). Identifiers are opaque strings with no
+  published prefix scheme — unlike Stripe there is no `jrn_`/`ast_` convention to read a type off an id,
+  so a consumer must track which id belongs to which entity from context alone. The graph is not
+  connected across services: the User API's `userId` is the only key shared with the Journey API, and no
+  schema in either service $refs the other.
+id_conventions:
+  prefixed: false
+  format: opaque string (no declared format; not declared as uuid)
+  cross_service_key: userId
+  stripe_foreign_keys:
+  - stripeCustomerId
+  - stripeSubscriptionId
+  - stripeCheckoutSessionId
+  - priceId
+domains:
+- name: Design
+  api: BLNG Journey API
+  root_entity: Journey
+- name: Identity and tenancy
+  api: BLNG User API
+  root_entity: User
+- name: Commerce
+  api: BLNG Billing API
+  root_entity: Stripe Price / Product
+entities:
+- name: Journey
+  api: BLNG Journey API
+  description: A design or shopping session — the root object of the Design product. Soft-deletable and restorable.
+  key: id
+  fields_of_note: [id, userId, type (design|shopping), specifics]
+  embeds: [JourneySpecifics]
+- name: JourneySpecifics
+  api: BLNG Journey API
+  description: The canvas state of a journey — layers, colors, and the currently visible/generated image references.
+  embeds: [Layer, Color, AssetReference]
+  id_fields: [lastGenerateImageId, visibleCanvasImageId, sceneImageId]
+- name: Layer
+  api: BLNG Journey API
+  description: Polymorphic canvas layer. oneOf ImageLayer, ModelLayer, LegacyLayer.
+  variants: [ImageLayer, ModelLayer, LegacyLayer]
+- name: LayerModel3D
+  api: BLNG Journey API
+  description: A 3D model placed on a layer, with a Transform3D (Vector3 position/scale, Quaternion rotation).
+  id_fields: [modelId, resolvedAssetId]
+- name: Prompt
+  api: BLNG Journey API
+  description: A generation request against a journey, with its request and response payloads.
+  key: id
+  id_fields: [id, journeyId, userId]
+- name: ChatPrompt
+  api: BLNG Journey API
+  description: The conversational form of a prompt (v2 and v3 request shapes), optionally scoped by a lasso mask.
+  id_fields: [promptId, journeyId]
+  embeds: [ImageGenPromptDetails, LassoMask, AssetDetails]
+- name: Asset
+  api: BLNG Journey API
+  description: A stored file (uploaded or generated) owned by a user and usually bound to a journey. Uploaded and downloaded via presigned URLs.
+  key: id
+  id_fields: [id, userId, journeyId]
+- name: Image
+  api: BLNG Journey API
+  description: An image within a journey.
+  id_fields: [imageId, journeyId]
+- name: Model3D
+  api: BLNG Journey API
+  description: A generated 3D model with per-format conversion slots (Model3DSlot, each pointing at an assetId).
+  key: id
+  id_fields: [id, journeyId, sourceAssetId]
+- name: ModelGeneration
+  api: BLNG Journey API
+  description: An asynchronous 3D generation job. Terminal state is oneOf success (modelId + glbAssetId) or error.
+  key: id
+  id_fields: [id, journeyId, promptId, modelId, glbAssetId]
+- name: DesignPlanItem
+  api: BLNG Journey API
+  description: A multi-stage design plan produced for a prompt; each DesignPlanStage carries its generated image assetIds.
+  id_fields: [planId, journeyId, promptId]
+- name: ImageOpsRequest
+  api: BLNG Journey API
+  description: Polymorphic asynchronous image operation (layer, prompt, or legacy) between a source and destination asset.
+  variants: [ImageOpsLayerRequest, ImageOpsPromptRequest, ImageOpsLegacyRequest]
+  id_fields: [journeyId, sourceAssetId, destinationAssetId, generationId]
+- name: User
+  api: BLNG User API
+  description: The account. Carries the active workspace, the Stripe customer id, and a marketing consent receipt.
+  key: userId
+  id_fields: [userId, stripeCustomerId, activeWorkspaceId]
+- name: Workspace
+  api: BLNG User API
+  description: The tenancy boundary. Can nest under a parent workspace (enterprise), carries SSO config and an integrity report.
+  key: workspaceId
+  represented_by: [WorkspaceMembership, UserWorkspaceSwitcherItem, WorkspaceIntegrityReport]
+- name: WorkspaceMembership
+  api: BLNG User API
+  description: Join entity between User and Workspace, carrying the member's role and federated IdP binding.
+  id_fields: [userId, workspaceId, federatedIdpId]
+- name: WorkspaceInvitation
+  api: BLNG User API
+  description: A pending invitation to a workspace, with admin and public projections.
+  key: workspaceInvitationId
+  id_fields: [workspaceInvitationId, workspaceId]
+- name: Subscription
+  api: BLNG User API
+  description: A BLNG subscription with entitlements, owner, and its Stripe subscription/customer ids.
+  key: subscriptionId
+  id_fields: [subscriptionId, ownerId, stripeSubscriptionId, stripeCustomerId]
+  embeds: [Entitlements]
+- name: Invitation
+  api: BLNG User API
+  deprecated: true
+  description: Legacy subscription-level invitation, superseded by WorkspaceInvitation.
+  key: invitationId
+  id_fields: [invitationId, subscriptionId, inviterId]
+- name: Organization
+  api: BLNG User API
+  deprecated: true
+  description: Legacy tenancy object, superseded by Workspace.
+  key: organizationId
+  id_fields: [organizationId, stripeCustomerId]
+- name: Tooltip
+  api: BLNG User API
+  description: Onboarding tooltip registration and per-user flow state.
+  key: id
+- name: Price
+  api: BLNG Billing API
+  description: A Stripe price surfaced through the BLNG catalog endpoint.
+  key: id
+- name: StripeSubscription
+  api: BLNG Billing API
+  description: Stripe subscription projection used by the webhook receivers.
+  key: id
+relationships:
+- from: Journey
+  to: User
+  type: belongs_to
+  via: userId
+- from: Journey
+  to: JourneySpecifics
+  type: has_one
+  via: $ref
+- from: JourneySpecifics
+  to: Layer
+  type: has_many
+  via: $ref
+- from: Layer
+  to: LayerImage
+  type: has_one
+  via: $ref
+- from: LayerModel3D
+  to: Model3D
+  type: belongs_to
+  via: modelId
+- from: LayerModel3D
+  to: Asset
+  type: belongs_to
+  via: resolvedAssetId
+- from: Prompt
+  to: Journey
+  type: belongs_to
+  via: journeyId
+- from: Prompt
+  to: User
+  type: belongs_to
+  via: userId
+- from: ChatPrompt
+  to: Prompt
+  type: belongs_to
+  via: promptId
+- from: ChatPrompt
+  to: Journey
+  type: belongs_to
+  via: journeyId
+- from: Asset
+  to: Journey
+  type: belongs_to
+  via: journeyId
+- from: Asset
+  to: User
+  type: belongs_to
+  via: userId
+- from: Image
+  to: Journey
+  type: belongs_to
+  via: journeyId
+- from: Model3D
+  to: Journey
+  type: belongs_to
+  via: journeyId
+- from: Model3D
+  to: Asset
+  type: belongs_to
+  via: sourceAssetId
+- from: Model3D
+  to: Model3DSlot
+  type: has_many
+  via: $ref
+- from: Model3DSlot
+  to: Asset
+  type: belongs_to
+  via: assetId
+- from: ModelGeneration
+  to: Journey
+  type: belongs_to
+  via: journeyId
+- from: ModelGeneration
+  to: Prompt
+  type: belongs_to
+  via: promptId
+- from: ModelGeneration
+  to: Model3D
+  type: has_one
+  via: modelId
+- from: DesignPlanItem
+  to: Journey
+  type: belongs_to
+  via: journeyId
+- from: DesignPlanItem
+  to: Prompt
+  type: belongs_to
+  via: promptId
+- from: DesignPlanItem
+  to: DesignPlanStage
+  type: has_many
+  via: $ref
+- from: DesignPlanStage
+  to: Asset
+  type: has_many
+  via: assetId
+- from: ImageOpsRequest
+  to: Asset
+  type: belongs_to
+  via: sourceAssetId, destinationAssetId
+- from: User
+  to: Workspace
+  type: belongs_to
+  via: activeWorkspaceId
+- from: User
+  to: WorkspaceMembership
+  type: has_many
+  via: userId
+- from: WorkspaceMembership
+  to: Workspace
+  type: belongs_to
+  via: workspaceId
+- from: Workspace
+  to: Workspace
+  type: belongs_to
+  via: parentWorkspaceId
+- from: Workspace
+  to: Subscription
+  type: has_one
+  via: subscriptionId
+- from: WorkspaceInvitation
+  to: Workspace
+  type: belongs_to
+  via: workspaceId
+- from: Subscription
+  to: User
+  type: belongs_to
+  via: ownerId
+- from: Subscription
+  to: Entitlements
+  type: has_one
+  via: $ref
+- from: Invitation
+  to: Subscription
+  type: belongs_to
+  via: subscriptionId
+- from: Invitation
+  to: User
+  type: belongs_to
+  via: inviterId
+- from: Organization
+  to: Subscription
+  type: has_many
+  via: stripeCustomerId
+- from: UserTooltipFlow
+  to: TooltipRegistration
+  type: has_many
+  via: $ref
+- from: CreateCheckoutSessionRequest
+  to: Subscription
+  type: belongs_to
+  via: subscriptionId
+- from: CreateCheckoutSessionRequest
+  to: Price
+  type: belongs_to
+  via: priceId
+- from: CheckoutSessionCompletedRequest
+  to: User
+  type: belongs_to
+  via: userId
+counts:
+  schemas_total: 80
+  schemas_journey: 48
+  schemas_user: 27
+  schemas_billing: 5
+  entities_documented: 22
+  relationships: 41

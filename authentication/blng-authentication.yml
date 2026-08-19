@@ -1,0 +1,30 @@
+generated: '2026-08-13'
+method: derived
+source: openapi/blng-billing-api-openapi.yml, openapi/blng-journey-api-openapi.yml, openapi/blng-user-api-openapi.yml
+summary:
+  types:
+  - http
+  - oauth2
+  oauth2_flows:
+  - implicit
+schemes:
+- name: cognitoUserAuth
+  type: oauth2
+  flows:
+  - flow: implicit
+    authorizationUrl: https://auth.app.blng.ai/oauth2/authorize
+    scopes: 4
+  description: Cognito authorization code flow for users
+  sources:
+  - openapi/blng-billing-api-openapi.yml
+  - openapi/blng-journey-api-openapi.yml
+  - openapi/blng-user-api-openapi.yml
+- name: bearerAuth
+  type: http
+  scheme: bearer
+  bearerFormat: JWT
+  description: "Use your Cognito \"access_token\" or \"id_token\" obtained from AWS Cognito\
+    \ Hosted UI \nor CLI. Click \"Authorize\" and paste the token."
+  sources:
+  - openapi/blng-journey-api-openapi.yml
+  - openapi/blng-user-api-openapi.yml

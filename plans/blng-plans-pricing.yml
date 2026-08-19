@@ -1,0 +1,159 @@
+generated: '2026-08-13'
+method: probed
+source: https://billing.blng.ai/billing/products
+docs: https://blng.ai/pricing
+note: >-
+  Two independent readings agree. The published pricing page lists three BLNG Design tiers plus two
+  enterprise-only product lines (Retail, Studio). The Billing API's own product catalog endpoint,
+  https://billing.blng.ai/billing/products, answers unauthenticated with live Stripe product and price
+  objects and returns exactly one paid, checkout-eligible product — BLNG Professional at USD 49.00 per
+  seat per month, recurring monthly, licensed usage. Starter is free (no Stripe product) and every
+  Enterprise tier is contact-sales, so neither appears in the machine-readable catalog. Quotas below are
+  the provider's own published feature limits; no API-call quota, credit balance, or rate allowance is
+  published for any tier.
+currency: USD
+plan_count: 5
+product_lines:
+- name: BLNG Design
+  url: https://blng.ai/pricing
+- name: BLNG Retail
+  url: https://blng.ai/pricing
+- name: BLNG Studio
+  url: https://blng.ai/pricing
+plans:
+- name: Starter
+  product_line: BLNG Design
+  price: 0
+  currency: USD
+  billing_period: null
+  unit: per user
+  public: true
+  self_serve: true
+  stripe_product: null
+  summary: For anyone ready to design today, at no cost.
+  included:
+    editors: 1
+    design_files: 3
+    history: 24 hours
+    artistic_styles: 4
+    quality: Premium
+  limits:
+  - 1 editor
+  - 3 design files
+  - 24 hour history
+  - 4 artistic styles
+  - No 4K upscaling
+  - No priority queue
+  - No unlimited file storage
+  overage: null
+  api_quota: null
+- name: Professional
+  product_line: BLNG Design
+  price: 49
+  currency: USD
+  billing_period: month
+  unit: per user
+  public: true
+  self_serve: true
+  popular: true
+  stripe_product: prod_RYzl8wCmbUPUFP
+  stripe_price: price_1RW4WAACEt9FZCf3UHO1V3fn
+  stripe_unit_amount: 4900
+  stripe_recurring:
+    interval: month
+    interval_count: 1
+    usage_type: licensed
+  stripe_marketing_features:
+  - 3 editors
+  - Unlimited design files
+  - 1 team
+  summary: For jewelry professionals and small teams eager to elevate their design process.
+  included:
+    editors: 3
+    teams: 1
+    design_files: unlimited
+    history: unlimited
+    upscaling: 4K
+  limits:
+  - Everything in Starter
+  - Unlimited design files
+  - Unlimited history
+  - Priority queue
+  - Full design privacy
+  - Upscaling to 4K
+  overage: null
+  api_quota: null
+- name: Enterprise
+  product_line: BLNG Design
+  price: null
+  price_label: Let's talk
+  currency: USD
+  billing_period: null
+  public: true
+  self_serve: false
+  contact_sales: true
+  contact_url: https://portal.blng.ai/contact-us
+  api_endpoint: POST https://billing.blng.ai/billing/requestEnterprise
+  summary: For organizations seeking premium services designed to reflect their unique brand identity.
+  limits:
+  - Everything in Professional
+  - Unlimited teams and editors
+  - Customized AI models
+  - Custom artistic styles
+  - Custom security and privacy
+  - Integration services
+  - Dedicated onboarding
+  - Priority support
+  - Single sign-on (SSO)
+  overage: null
+  api_quota: null
+- name: Retail Enterprise
+  product_line: BLNG Retail
+  price: null
+  price_label: Contact us
+  currency: USD
+  billing_period: null
+  public: true
+  self_serve: false
+  contact_sales: true
+  summary: In-store custom design experience for retailers.
+  limits:
+  - Everything in Design Enterprise
+  - Store license
+  - Retail POS system integration
+  - Client management access
+  - Direct access to trusted manufacturers
+  - Training and support
+  - Custom branding options
+  overage: null
+  api_quota: null
+- name: Studio Enterprise
+  product_line: BLNG Studio
+  price: null
+  price_label: Contact us
+  currency: USD
+  billing_period: null
+  public: true
+  self_serve: false
+  contact_sales: true
+  summary: High-fidelity marketing content from CAD models.
+  limits:
+  - Product photography with lighting and background templates
+  - On-body photography and videos
+  - 360-degree videos
+  - Customized templates
+  - Editorial look with on-model pairing
+  - Digital asset management and CAD standardization
+  - E-commerce integration with AI-powered product search
+  overage: null
+  api_quota: null
+x-evidence:
+- url: https://billing.blng.ai/billing/products
+  http_status: 200
+  content_type: application/json
+  fetched: '2026-08-13'
+  finding: one live Stripe product, BLNG Professional, unit_amount 4900 USD, recurring monthly
+- url: https://blng.ai/pricing
+  http_status: 200
+  fetched: '2026-08-13'
+  finding: Starter free, Professional $49/user/month, Enterprise contact-sales, plus Retail and Studio enterprise lines

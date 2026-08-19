@@ -1,0 +1,55 @@
+generated: '2026-08-13'
+method: derived
+source: openapi/blng-billing-api-openapi.yml
+asyncapi_published: false
+consumer_webhooks: false
+note: >-
+  BLNG publishes no AsyncAPI definition and no event or streaming contract for consumers. The only
+  webhook endpoints anywhere in its three specs are INBOUND receivers that Stripe calls — BLNG is the
+  subscriber, not the publisher. There is no way for an integrator or agent to subscribe to a BLNG
+  event, so NO `Webhooks` or `AsyncAPI` pointer is wired in apis.yml. Recording the receivers here is a
+  factual note about the billing integration, not evidence of an event surface.
+  This is an honest absence, and the asyncapi scoring family is N/A for this provider rather than failed.
+inbound_receivers:
+  direction: inbound (Stripe -> BLNG)
+  api: BLNG Billing API
+  host: https://billing.blng.ai
+  endpoints:
+  - path: /billing/webhook/checkoutSessionCompleted
+    method: POST
+    tag: Webhook
+    source_event: Stripe checkout.session.completed
+    request_schema: CheckoutSessionCompletedRequest
+  - path: /billing/webhook/customerSubscriptionUpdated
+    method: POST
+    tag: Webhook
+    source_event: Stripe customer.subscription.updated
+    request_schema: StripeSubscription
+  - path: /billing/webhook/customerSubscriptionDeleted
+    method: POST
+    tag: Webhook
+    source_event: Stripe customer.subscription.deleted
+    request_schema: StripeSubscription
+realtime_surfaces:
+  note: >-
+    The BLNG web application does hold long-lived connections, discoverable from the app's
+    Content-Security-Policy connect-src directive — wss://gws.blng.ai, wss://crdt.blng.ai (collaborative
+    editing / CRDT sync) and wss://voice.blng.ai. All three answer HTTP 426 Upgrade Required to a plain
+    GET and publish no schema, catalog or documentation. They are recorded as observed transport, not as
+    a contract, and nothing is derived from them.
+  endpoints:
+  - url: wss://gws.blng.ai
+    probe_status: 426
+    documented: false
+  - url: wss://crdt.blng.ai
+    probe_status: 426
+    documented: false
+  - url: wss://voice.blng.ai
+    probe_status: null
+    probe_note: no TLS handshake to a plain HTTPS GET
+    documented: false
+  source: Content-Security-Policy header of https://app.blng.ai/
+async_pattern_in_rest:
+  note: >-
+    Long-running work in the Journey API is polled, not pushed — 202 Accepted followed by
+    getModelGeneration / listModelGenerations or getDesignPlanForJourney. See conventions/blng-conventions.yml.

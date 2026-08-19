@@ -1,0 +1,55 @@
+generated: '2026-08-13'
+method: derived
+source: openapi/blng-billing-api-openapi.yml, openapi/blng-journey-api-openapi.yml, openapi/blng-user-api-openapi.yml
+schemes:
+- name: cognitoUserAuth
+  source: openapi/blng-billing-api-openapi.yml
+  flows:
+  - flow: implicit
+    authorizationUrl: https://auth.app.blng.ai/oauth2/authorize
+  description: Cognito authorization code flow for users
+- name: cognitoUserAuth
+  source: openapi/blng-journey-api-openapi.yml
+  flows:
+  - flow: implicit
+    authorizationUrl: https://auth.app.blng.ai/oauth2/authorize
+  description: Cognito authorization code flow for users
+- name: cognitoUserAuth
+  source: openapi/blng-user-api-openapi.yml
+  flows:
+  - flow: implicit
+    authorizationUrl: https://auth.app.blng.ai/oauth2/authorize
+  description: Cognito authorization code flow for users
+scopes:
+- scope: aws.cognito.signin.user.admin
+  description: aws.cognito.signin.user.admin
+  flows:
+  - implicit
+  sources:
+  - openapi/blng-billing-api-openapi.yml
+  - openapi/blng-journey-api-openapi.yml
+  - openapi/blng-user-api-openapi.yml
+- scope: email
+  description: email
+  flows:
+  - implicit
+  sources:
+  - openapi/blng-billing-api-openapi.yml
+  - openapi/blng-journey-api-openapi.yml
+  - openapi/blng-user-api-openapi.yml
+- scope: openid
+  description: openid
+  flows:
+  - implicit
+  sources:
+  - openapi/blng-billing-api-openapi.yml
+  - openapi/blng-journey-api-openapi.yml
+  - openapi/blng-user-api-openapi.yml
+- scope: profile
+  description: profile
+  flows:
+  - implicit
+  sources:
+  - openapi/blng-billing-api-openapi.yml
+  - openapi/blng-journey-api-openapi.yml
+  - openapi/blng-user-api-openapi.yml

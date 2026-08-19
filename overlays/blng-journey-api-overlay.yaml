@@ -1,0 +1,61 @@
+overlay: 1.0.0
+info:
+  title: API Evangelist enhancements for the BLNG Journey API
+  version: 1.0.0
+x-provenance:
+  generated: '2026-08-13'
+  method: generated
+  source: openapi/blng-journey-api-openapi.yml
+  note: >-
+    Extends openapi/blng-journey-api-openapi.yml, which is the provider's own definition saved verbatim
+    from https://journeys.blng.ai/swagger.yaml. The original is never mutated. Every action below records
+    something established by probing the live service or by reading the contract — the absolute server
+    URL, the operationId the provider left off one operation, contact and licence metadata BLNG does not
+    publish, and the runtime facts (auth, no idempotency, no rate-limit headers) an agent needs.
+extends: openapi/blng-journey-api-openapi.yml
+actions:
+- target: $.info
+  update:
+    contact:
+      name: BLNG Support
+      email: support@blng.ai
+      url: https://portal.blng.ai/
+    x-api-evangelist:
+      profile: https://apis.io/providers/blng
+      enriched: '2026-08-13'
+      spec_source: https://journeys.blng.ai/swagger.yaml
+      spec_source_status: 200
+      developer_program: none
+      note: >-
+        BLNG publishes no developer program. This definition is served publicly and unauthenticated
+        behind Swagger UI at the API host root, but it is not linked from blng.ai or docs.blng.ai.
+- target: $
+  update:
+    servers:
+    - url: https://journeys.blng.ai/v2
+      description: >-
+        Production. The original declares the relative path `/v2` only; this is the absolute base,
+        confirmed by GET https://journeys.blng.ai/v2/journeys returning 401 Unauthorized (the path
+        exists and is protected) while GET https://journeys.blng.ai/journeys returns the Swagger UI page.
+- target: $.paths['/design/journeys/{journeyId}/image-ops'].post
+  update:
+    operationId: submitImageOps
+    x-api-evangelist-note: >-
+      The provider left operationId off this single operation; every other operation in the definition
+      has one. `submitImageOps` is an API Evangelist-assigned identifier for tooling, not a provider name.
+- target: $.info
+  update:
+    x-conventions:
+      authentication: AWS Cognito bearer JWT (access_token or id_token) from https://auth.app.blng.ai
+      idempotency: none — no Idempotency-Key on any write; a retried POST is not deduplicated
+      conditional_requests: ETag / If-None-Match / 304 on getJourney, getPromptsForJourney, getDesignPlanForJourney, listDesignPlansForJourney
+      pagination: cursor — pageSize (default 10, max 100) + nextPageKey
+      rate_limit_headers: none — 429 carries {code, message}, no Retry-After
+      long_running: 202 Accepted then poll; no callbacks
+      binary_assets: presigned S3 URLs, never inline bytes
+      error_format: not RFC 9457
+      artifacts:
+        conventions: conventions/blng-conventions.yml
+        errors: errors/blng-problem-types.yml
+        rate_limits: rate-limits/blng-rate-limits.yml
+        data_model: data-model/blng-data-model.yml

@@ -1,0 +1,143 @@
+generated: '2026-08-13'
+method: derived
+source: openapi/blng-journey-api-openapi.yml, openapi/blng-user-api-openapi.yml, openapi/blng-billing-api-openapi.yml
+format: none
+note: >-
+  BLNG publishes no error reference page. This catalog is derived from every 4xx/5xx response declared
+  across the 88 operations in the three specs. It is NOT RFC 9457 — no operation returns
+  application/problem+json, no `type` URI is ever emitted, and there are three incompatible error body
+  shapes in use. Where the provider named a machine-readable code string, it is recorded verbatim;
+  everywhere else the only machine signal is the HTTP status.
+envelopes:
+- id: message-only
+  shape: '{"message": "string"}'
+  schema: components.schemas.ErrorResponse (User API)
+  scope: User API, and the AWS API Gateway platform defaults on all three services
+  machine_readable_code: false
+- id: code-and-message
+  shape: '{"code": "string", "message": "string"}'
+  scope: Journey API 429 responses
+  machine_readable_code: true
+- id: generation-failure
+  shape: '{"ok": false, "generationId": "string", "imageAssetId": "string", "error": "string"}'
+  schema: components.schemas.ModelGenerationErrorResponse (Journey API)
+  scope: Journey API 3D model generation
+  machine_readable_code: false
+- id: operation-lock
+  shape: '{"message": "string", "operationInFlight": "chatPrompt|modelGeneration", "operationOwnerId": "string", "operationExpiresAt": "date-time"}'
+  scope: Journey API 423 responses
+  machine_readable_code: true
+codes:
+- code: CONCURRENCY_LIMIT_EXCEEDED
+  status: 429
+  api: Journey API
+  meaning: The user has exceeded their concurrency limit for chat prompts.
+  remediation: Wait for an in-flight prompt to finish, then resubmit. No Retry-After is returned; back off client-side.
+  operations: [submitChatPrompt, submitChatPromptV3]
+problem_types:
+- status: 400
+  title: Bad Request
+  count: 63
+  apis: [Journey API, User API, Billing API]
+  common_causes:
+  - Invalid input data or request parameters
+  - Missing or malformed request body
+  - journeyIds missing, empty, blank, or over 50 entries (restoreJourneysBulk)
+  - Cannot invite your own email address (workspace invitations)
+  - Invitation not pending or expired
+  remediation: Validate the payload against the schema in the spec before retrying; the response carries prose only, no field-level errors.
+- status: 401
+  title: Unauthorized
+  count: 3
+  apis: [Journey API, Billing API]
+  common_causes:
+  - Missing, expired or invalid AWS Cognito bearer token
+  remediation: Obtain a fresh access_token or id_token from https://auth.app.blng.ai/oauth2/authorize and retry.
+  note: >-
+    API Gateway also returns a bare {"message":"Unauthorized"} on unauthenticated calls to endpoints that
+    do not declare a 401 in the spec — observed live on GET https://journeys.blng.ai/v2/journeys and
+    GET https://users.blng.ai/users/{userId}.
+- status: 403
+  title: Forbidden
+  count: 21
+  apis: [Journey API, User API, Billing API]
+  common_causes:
+  - Workspace role does not permit the action (delete, restore, update)
+  - Caller is no longer a member of the workspace
+  - Multi-tenancy disabled on the account
+  - Workspace creation limit reached
+  - Caller not linked to the subscription, or lacks the OWNER / BILLING_ADMIN role
+  remediation: Check the caller's workspace membership and role; billing operations require OWNER or BILLING_ADMIN.
+- status: 404
+  title: Not Found
+  count: 62
+  apis: [Journey API, User API, Billing API]
+  common_causes:
+  - Journey, prompt, asset, image, model or plan not found
+  - User, workspace, invitation, organization or subscription not found
+  - Checkout session not found
+  remediation: Confirm the identifier and that the caller has visibility of the resource — 404 is also used where 403 would leak existence.
+- status: 409
+  title: Conflict
+  count: 13
+  apis: [Journey API, User API]
+  common_causes:
+  - Design plan already exists, or prompt already in a terminal state
+  - Subscription already linked to the user
+  - Pending invite already exists, or user is already a member
+  - Invitation is not pending, or was accepted concurrently
+  remediation: Re-read current state before retrying. There is no idempotency key, so a blind retry of a create can produce this.
+- status: 422
+  title: Unprocessable Entity
+  count: 2
+  apis: [Journey API]
+  common_causes:
+  - imageAssetId is not one of the prompt's generatedImageIds
+  - Invalid layer image request
+  remediation: Pass an asset id drawn from the prompt's own generatedImageIds list.
+- status: 423
+  title: Locked
+  count: 1
+  apis: [Journey API]
+  common_causes:
+  - A chatPrompt or modelGeneration operation is already in progress for this journey
+  remediation: >-
+    Read operationInFlight and operationExpiresAt from the body and retry after the lock expires. This is
+    the one response in the catalog that tells a client WHEN to retry.
+  operations: [startModelGeneration]
+- status: 429
+  title: Too Many Requests
+  count: 3
+  apis: [Journey API, User API]
+  common_causes:
+  - Per-user chat prompt concurrency limit exceeded (code CONCURRENCY_LIMIT_EXCEEDED)
+  - Invitation resend cooldown not elapsed
+  remediation: Back off and retry. No Retry-After or RateLimit-* header is returned.
+  see: rate-limits/blng-rate-limits.yml
+- status: 500
+  title: Internal Server Error
+  count: 55
+  apis: [User API, Billing API]
+  common_causes:
+  - Unhandled server error
+  - HubSpot form submit failed (requestEnterprise)
+  - Failed to process the checkout session (confirmCheckout)
+  remediation: Retry with backoff; escalate to support@blng.ai. Note the Journey API declares no 5xx responses at all.
+- status: 503
+  title: Service Unavailable
+  count: 1
+  apis: [User API]
+  common_causes:
+  - DynamoDB throughput limit reached
+  remediation: The spec explicitly instructs the client to retry.
+  operations: [accept workspace invitation]
+coverage:
+  operations_total: 88
+  operations_with_4xx: 88
+  distinct_statuses: 10
+  machine_readable_codes: 1
+gaps:
+- No RFC 9457 problem+json; no `type` URI on any error.
+- Only one named error code across 88 operations; everything else is prose in `message`.
+- No field-level validation detail on any 400.
+- The Journey API declares no 5xx response on any operation, so clients have no documented server-error contract there.

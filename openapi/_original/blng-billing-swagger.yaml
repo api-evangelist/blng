@@ -1,0 +1,463 @@
+openapi: 3.0.1
+info:
+  title: Billing Api
+  description: Api to manage user's payment and billing
+  version: 1.0.0
+paths:
+  /billing/requestEnterprise:
+    post:
+      tags:
+        - Billing
+      summary: Submit an enterprise "Contact Sales" inquiry
+      security:
+        - cognitoUserAuth:
+            - openid
+      description: >-
+        Submits an authenticated in-app enterprise inquiry to the HubSpot form,
+        which owns the Enterprise/Teams/Solo routing and acknowledgment emails.
+        Off prod the HubSpot form is not configured, so the submission is
+        accepted and skipped (the email/Sheet backup still records it).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - environment
+                - firstName
+                - lastName
+                - workEmail
+                - website
+                - designTeamSize
+                - procurement
+              properties:
+                environment:
+                  type: string
+                  description: Origin environment of the submission
+                  example: 'prod'
+                firstName:
+                  type: string
+                  example: 'Ada'
+                lastName:
+                  type: string
+                  example: 'Lovelace'
+                workEmail:
+                  type: string
+                  format: email
+                  example: 'ada@example.com'
+                website:
+                  type: string
+                  maxLength: 2048
+                  example: 'example.com'
+                designTeamSize:
+                  type: string
+                  enum:
+                    [
+                      '1',
+                      '2-5',
+                      '6-10',
+                      '11-15',
+                      '16-25',
+                      '26-50',
+                      '51+'
+                    ]
+                  example: '6-10'
+                procurement:
+                  type: string
+                  enum: [ 'Yes', 'No', 'Sometimes' ]
+                  example: 'No'
+      responses:
+        '201':
+          description: Submission accepted (submitted to HubSpot on prod, skipped off prod)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  submitted:
+                    type: boolean
+                    example: true
+        '400':
+          description: Missing or invalid request body
+        '401':
+          description: Unauthenticated
+        '500':
+          description: The HubSpot form submit failed
+  /billing/products:
+    get:
+      tags:
+        - Billing
+      summary: Retrieve available products and their prices
+      description: Fetches active products along with their associated prices from Stripe.
+      responses:
+        '200':
+          description: Successfully retrieved products and prices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  productData:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: 'Unique identifier for the product'
+                          example: 'prod_12345'
+                        name:
+                          type: string
+                          description: 'Product name'
+                          example: 'Premium Subscription'
+                        metadata:
+                          type: object
+                          description: 'Additional metadata associated with the product'
+                        prices:
+                          type: array
+                          items:
+                            $ref: '#/components/schemas/Price'
+        '500':
+          description: Internal server error
+  /billing/createCheckoutSession:
+    post:
+      tags:
+        - Billing
+      summary: Create Stripe's checkout session (aka as payment link)
+      security:
+        - cognitoUserAuth:
+            - openid
+      description: >-
+        Generates a checkout session URL for subscribing to a tier plan.
+        Requires the caller to be an OWNER or BILLING_ADMIN of the workspace
+        owning the subscription.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCheckoutSessionRequest'
+      responses:
+        '200':
+          description: Payment link for user to subscribe to tier plan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                    description: 'The generated URL for the checkout session'
+                    example: 'https://checkout.stripe.com/session/abc123'
+        '400':
+          description: Invalid request parameters
+        '403':
+          description: Caller is not linked to the subscription or lacks the
+            OWNER/BILLING_ADMIN role
+        '500':
+          description: Internal server error
+  /billing/createCustomerPortal:
+    post:
+      tags:
+        - Billing
+      summary: Create a link to customer's billing portal
+      security:
+        - cognitoUserAuth:
+            - openid
+      description: >-
+        Generates a customer portal session link allowing users to manage their
+        subscription and payment settings. Requires the caller to be an OWNER or
+        BILLING_ADMIN of the workspace owning the subscription.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomerPortalRequest'
+      responses:
+        '200':
+          description: Successfully created customer portal session
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                    description: 'The generated URL for the customer portal session'
+                    example: 'https://billing.stripe.com/session/abc123'
+        '400':
+          description: Invalid request parameters
+        '403':
+          description: Caller is not linked to the subscription or lacks the
+            OWNER/BILLING_ADMIN role
+        '404':
+          description: Subscription not found
+        '500':
+          description: Internal server error
+  "/billing/confirmCheckout/{stripeCheckoutSessionId}":
+    post:
+      tags:
+        - Billing
+      summary: Confirm Stripe Checkout Session
+      security:
+        - cognitoUserAuth:
+            - openid
+      description: >-
+        Uses Stripe Checkout Session ID to confirm the checkout. Called in
+        addition to the webhook for redundancy. Requires the caller to be an
+        OWNER or BILLING_ADMIN of the workspace owning the subscription.
+      parameters:
+        - name: stripeCheckoutSessionId
+          in: path
+          required: true
+          description: The Stripe Checkout Session ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully confirmed the checkout session
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                    description: Indicates whether the checkout session was processed
+                    example: true
+        '400':
+          description: No stripeCheckoutSessionId was provided
+        '403':
+          description: Caller is not linked to the subscription or lacks the
+            OWNER/BILLING_ADMIN role
+        '404':
+          description: Checkout session not found
+        '500':
+          description: Failed to process the checkout session
+  /billing/webhook/checkoutSessionCompleted:
+    post:
+      tags:
+        - Webhook
+      summary: Webhook to handle checkout session completed event
+      description: Processes Stripe checkout session completion events and updates the
+        billing information accordingly.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutSessionCompletedRequest'
+      responses:
+        '200':
+          description: Successfully processed checkout session event
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Checkout session processed successfully'
+                  received:
+                    type: boolean
+                    example: true
+        '400':
+          description: Invalid request parameters
+        '500':
+          description: Internal server error
+  /billing/webhook/customerSubscriptionUpdated:
+    post:
+      tags:
+        - Webhook
+      summary: Webhook to handle customer subscription updates
+      description: Processes Stripe subscription updates and adjusts user
+        subscriptions accordingly.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StripeSubscription'
+      responses:
+        '200':
+          description: Successfully processed subscription update
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                    example: true
+        '400':
+          description: Invalid request parameters
+        '500':
+          description: Internal server error
+  /billing/webhook/customerSubscriptionDeleted:
+    post:
+      tags:
+        - Webhook
+      summary: Webhook to handle customer subscription deletion
+      description: Processes Stripe subscription deletion events and updates the
+        billing information accordingly.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StripeSubscription'
+      responses:
+        '200':
+          description: Successfully processed subscription deletion
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                    example: true
+        '400':
+          description: Invalid request parameters
+        '500':
+          description: Internal server error
+components:
+  schemas:
+    # Stripe price schema
+    Price:
+      type: object
+      properties:
+        id:
+          type: string
+          description: 'Unique identifier for the price'
+          example: 'price_12345'
+    CreateCustomerPortalRequest:
+      type: object
+      properties:
+        subscriptionId:
+          type: string
+          description: 'The ID of the subscription'
+          example: 'subId-xxx'
+        callbackUrl:
+          type: string
+          format: uri
+          description: 'URL to redirect the user after portal interaction'
+          example: 'http://localhost:3000/dashboard'
+    CreateCheckoutSessionRequest:
+      type: object
+      properties:
+        quantity:
+          type: integer
+          description: 'Quantity of the subscription item'
+          example: 1
+        email:
+          type: string
+          format: email
+          description: "Customer's email address"
+          example: 'xxxx@gmail.com'
+        subscriptionId:
+          type: string
+          description: 'The ID of the subscription'
+          example: 'subId'
+        priceId:
+          type: string
+          description: 'The Stripe price ID for the subscription tier'
+          example: 'priceId'
+        callback:
+          type: object
+          description: 'Callback URLs for redirecting after success or failure'
+          properties:
+            successUrl:
+              type: string
+              format: uri
+              description: 'URL to redirect after a successful checkout'
+              example: 'http://localhost:3000/checkout/success?session_id={CHECKOUT_SESSION_ID}'
+            cancelUrl:
+              type: string
+              format: uri
+              description: 'URL to redirect if the checkout is cancelled'
+              example: 'http://localhost:3000/dashboard'
+    CheckoutSessionCompletedRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+          description: 'The ID of the user associated with the checkout session'
+          example: 'userId-xxx'
+        subscriptionId:
+          type: string
+          description: 'The ID of the subscription associated with the checkout session'
+          example: 'subId-xxx'
+        checkoutSessionId:
+          type: string
+          description: 'The unique identifier for the Stripe checkout session'
+          example: 'checkoutSessionId-xxx'
+    StripeSubscription:
+      type: object
+      properties:
+        id:
+          type: string
+          description: 'The ID of the stripe subscription being updated'
+          example: 'subId-xxx'
+        status:
+          type: string
+          description: 'Status of the subscription'
+          example: 'active'
+        items:
+          type: array
+          description: 'List of subscription items'
+          items:
+            type: object
+            properties:
+              priceId:
+                type: string
+                description: 'The ID of the price associated with the subscription'
+                example: 'price_12345'
+              data:
+                type: array
+                description: 'List of subscription items'
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: 'Unique identifier for the subscription item'
+                      example: 'si_12345'
+                    price:
+                      type: object
+                      description: 'Price details of the subscription item'
+                      properties:
+                        id:
+                          type: string
+                          description: 'Unique identifier for the price'
+  securitySchemes:
+    cognitoUserAuth:
+      type: oauth2
+      description: Cognito authorization code flow for users
+      flows:
+        # Implicit flow is less secure but it allows us to avoid implememinting the post call to obtain
+        # the JWT token from the token endpoint
+        implicit:
+          authorizationUrl: https://auth.app.blng.ai/oauth2/authorize
+          scopes:
+            email: email
+            profile: profile
+            openid: openid
+            aws.cognito.signin.user.admin: aws.cognito.signin.user.admin
+        # This flow does not work directly with Swagger because Cognito's Token URL doesn't have
+        # CORS setup and the token request is generated by Swagger's UI
+        # authorizationCode:
+        #   # Redirect and authorization endpoint: https://docs.aws.amazon.com/cognito/latest/developerguide/authorization-endpoint.html
+        #   authorizationUrl: https://auth.app.blng.ai/oauth2/authorize
+        #   # Token Issuer endpoint: https://docs.aws.amazon.com/cognito/latest/developerguide/token-endpoint.html
+        #   tokenUrl: https://auth.app.blng.ai/oauth2/token
+        #   scopes:
+        #     email: email
+        #     profile: profile
+        #     openid: openid
+        #     aws.cognito.signin.user.admin:
+        #       aws.cognito.signin.user.admin

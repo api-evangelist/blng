@@ -1,0 +1,46 @@
+generated: '2026-08-13'
+method: probed
+source: https://trust.blng.ai/
+present: true
+platform: Vanta Trust Center
+platform_evidence: >-
+  trust.blng.ai is a CNAME to 69d5a4d9eef946c721025951.cname.vantatrust.com, and the served page loads
+  its bundle from assets.vanta.com (index-trust-report.vite-*.js).
+url: https://trust.blng.ai/
+http_status: 200
+title: blng.ai Trust Center
+certifications: []
+certifications_readable: false
+note: >-
+  The trust center exists and answers 200, but every certification, control and policy on it is rendered
+  client-side by the Vanta React bundle. A non-JS client receives only the page shell, the title
+  "blng.ai Trust Center" and a meta description that repeats BLNG's mission statement — no SOC 2, ISO
+  27001, PCI, HIPAA or FedRAMP string appears anywhere in the served HTML. Vanta retired its public
+  GraphQL API (api.vanta.com/graphql returns HTTP 410 pointing at the REST API) and the REST trust-center
+  endpoint requires authorization (HTTP 401), so there is no anonymous machine path to the certification
+  list. Recorded as present with certifications unknown rather than guessed. NO `Compliance` pointer is
+  wired in apis.yml — that check requires a named, published certification.
+document_access: >-
+  Vanta trust centers typically gate report downloads behind an NDA/email request form; whether BLNG's
+  does could not be determined without executing the page.
+related:
+  privacy_policy: https://blng.ai/privacy-policy
+  california_notices: https://blng.ai/privacy-policy#california-notices
+  privacy_choices: https://blng.ai/your-privacy-choices
+  terms: https://blng.ai/terms
+  data_controls_doc: https://docs.blng.ai/account-management/data-controls/
+  account_security_doc: https://docs.blng.ai/account-management/security/
+x-evidence:
+- url: https://trust.blng.ai/
+  http_status: 200
+  content_type: text/html
+  bytes: 4953
+  fetched: '2026-08-13'
+- url: https://api.vanta.com/graphql
+  http_status: 410
+  fetched: '2026-08-13'
+  finding: GraphQL API retired in favor of the Vanta REST API
+- url: https://api.vanta.com/v1/trust-centers/69d5a4d9eef946c721025951
+  http_status: 401
+  fetched: '2026-08-13'
+  finding: authorization required; no anonymous read of the certification list

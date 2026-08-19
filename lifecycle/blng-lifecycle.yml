@@ -1,0 +1,114 @@
+generated: '2026-08-13'
+method: searched
+source: https://status.blng.ai/
+derived_from:
+- openapi/blng-user-api-openapi.yml
+- openapi/blng-journey-api-openapi.yml
+note: >-
+  BLNG runs a real, public status page but publishes no versioning policy, no deprecation policy, no SLA
+  and no changelog. The deprecation signal that DOES exist is in-spec: 17 of the 47 operations in the
+  User API carry `deprecated: true`, which is a stronger and more current signal than most published
+  policies — but nothing tells a consumer when those operations will be removed or what replaces them.
+status_page:
+  present: true
+  url: https://status.blng.ai/
+  http_status: 200
+  platform: Upptime (static, GitHub Actions driven)
+  source_repo: https://github.com/blng-ai/status
+  history_api: https://github.com/blng-ai/status/tree/main/api
+  incident_tracking: GitHub Issues on blng-ai/status
+  components_monitored:
+  - name: App
+    url: https://app.blng.ai
+  - name: Website
+    url: https://www.blng.ai
+  - name: Documentation
+    url: https://docs.blng.ai
+  - name: Help Center
+    url: https://help.blng.ai
+  gap: >-
+    None of the three API hosts (journeys.blng.ai, users.blng.ai, billing.blng.ai) is monitored on the
+    status page. A consumer of the APIs cannot tell from status.blng.ai whether the APIs are up.
+  machine_readable: true
+  machine_readable_note: Upptime publishes per-site JSON under /api/ in the status repo, and an RSS/Atom incident feed.
+versioning:
+  policy_published: false
+  scheme: path prefix on one service only
+  detail:
+  - Journey API declares servers[] url `/v2`; the live base is https://journeys.blng.ai/v2 (info.version 2.0.0).
+  - User API declares no servers[] block and is unversioned at https://users.blng.ai (info.version 1.0.0).
+  - Billing API declares no servers[] block and is unversioned at https://billing.blng.ai (info.version 1.0.0).
+  - >-
+    Operation-level versioning appears inside the Journey API: submitChatPrompt and submitChatPromptV3
+    coexist on /design/journeys/{journeyId}/chat-prompt and .../chat-prompt-v3, with no deprecation flag
+    on the older operation and no stated migration date.
+deprecation:
+  policy_published: false
+  sunset_header: false
+  deprecation_header: false
+  rfc8594: false
+  note: >-
+    No Deprecation or Sunset response header is declared anywhere in the three specs, and there is no
+    deprecation policy page. NO `Deprecation` pointer is wired in apis.yml — the flags below are spec
+    metadata, not a published policy.
+  deprecated_operations:
+    count: 17
+    of_total: 47
+    api: User API
+    source: openapi/blng-user-api-openapi.yml
+    surfaces_fully_deprecated:
+    - Invitation (all 8 operations)
+    - Organization (all 4 operations)
+    - Composite (both operations)
+    operations:
+    - POST /users/{userId}/subscriptions
+    - PUT /users/{userId}/subscriptions/{subscriptionId}
+    - POST /subscriptions
+    - POST /invitations
+    - GET /invitations
+    - GET /invitations/{invitationId}
+    - PUT /invitations/{invitationId}
+    - DELETE /invitations/{invitationId}
+    - POST /invitations/{invitationId}/resend
+    - POST /invitations/{invitationId}/accept
+    - GET /invitations/subscriptions/{subscriptionId}
+    - GET /organizations
+    - POST /organizations
+    - GET /organizations/{organizationId}
+    - PUT /organizations/{organizationId}
+    - POST /composite/createOrgAndSubscriptionWithUser
+    - POST /composite/createUserAndSubscription
+    likely_replacement: >-
+      The non-deprecated workspace surface — /users/{userId}/workspaces and
+      /users/{userId}/workspaces/{workspaceId}/invitations — appears to supersede the flat
+      /invitations and /organizations resources. This is an inference from the contract, not a
+      provider statement.
+sla:
+  published: false
+  uptime_commitment: null
+  note: No SLA, uptime target or credit schedule is published on any BLNG surface.
+changelog:
+  published: false
+  probed:
+  - url: https://blng.ai/changelog
+    status: 404
+  - url: https://docs.blng.ai/changelog/
+    status: 404
+  note: >-
+    Product news is posted at https://blng.ai/news but is marketing copy, not a dated, versioned change
+    log, so no ChangeLog pointer is wired.
+support:
+  email: support@blng.ai
+  help_center: https://portal.blng.ai/
+  documentation: https://docs.blng.ai/
+x-evidence:
+- url: https://status.blng.ai/
+  http_status: 200
+  fetched: '2026-08-13'
+- url: https://raw.githubusercontent.com/blng-ai/status/main/.upptimerc.yml
+  http_status: 200
+  fetched: '2026-08-13'
+  finding: four monitored sites, none of them an API host
+- url: https://blng.ai/changelog
+  http_status: 404
+  fetched: '2026-08-13'

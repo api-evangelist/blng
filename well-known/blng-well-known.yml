@@ -1,0 +1,161 @@
+generated: '2026-08-13'
+method: probed
+source: live HTTPS probes of every BLNG host named in apis.yml and in the OpenAPI security schemes
+note: >-
+  Nothing was found. Every /.well-known/ path on blng.ai and docs.blng.ai returns 404 with the site's
+  HTML 404 page. app.blng.ai answers HTTP 200 with the single-page-application shell for EVERY
+  /.well-known/* path — the CSP-bearing index.html, not a document — so those 200s are recorded as
+  misses, not hits. The API hosts (users.blng.ai, billing.blng.ai) are AWS API Gateway and return
+  {"message":"Not Found"}; journeys.blng.ai returns its Swagger UI HTML page for any unmatched path.
+  auth.app.blng.ai is an AWS Cognito hosted-UI custom domain and answers
+  {"error":"This URL doesn't exist on the authorization server."} — Cognito serves OIDC discovery from
+  its regional issuer (cognito-idp.us-west-2.amazonaws.com/<pool-id>), which is an AWS host, not a
+  BLNG-controlled one, so it is not recorded here as a BLNG well-known document.
+  NO WellKnown or SecurityTxt pointer is wired in apis.yml because no path returned a real document.
+hosts:
+- host: blng.ai
+  paths:
+  - path: /.well-known/security.txt
+    status: 404
+    file: null
+  - path: /.well-known/openid-configuration
+    status: 404
+    file: null
+  - path: /.well-known/oauth-authorization-server
+    status: 404
+    file: null
+  - path: /.well-known/api-catalog
+    status: 404
+    file: null
+  - path: /.well-known/ai-plugin.json
+    status: 404
+    file: null
+  - path: /.well-known/agent-card.json
+    status: 404
+    file: null
+  - path: /.well-known/agent.json
+    status: 404
+    file: null
+- host: docs.blng.ai
+  paths:
+  - path: /.well-known/security.txt
+    status: 404
+    file: null
+  - path: /.well-known/openid-configuration
+    status: 404
+    file: null
+  - path: /.well-known/oauth-authorization-server
+    status: 404
+    file: null
+  - path: /.well-known/api-catalog
+    status: 404
+    file: null
+  - path: /.well-known/ai-plugin.json
+    status: 404
+    file: null
+  - path: /.well-known/agent-card.json
+    status: 404
+    file: null
+  - path: /.well-known/agent.json
+    status: 404
+    file: null
+- host: app.blng.ai
+  note: >-
+    SPA catch-all. Every path returns 200 text/html with the application shell. Treated as a miss on
+    every path — a 200 that returns HTML is not a document.
+  paths:
+  - path: /.well-known/security.txt
+    status: 200
+    content_type: text/html
+    document: false
+    file: null
+  - path: /.well-known/openid-configuration
+    status: 200
+    content_type: text/html
+    document: false
+    file: null
+  - path: /.well-known/oauth-authorization-server
+    status: 200
+    content_type: text/html
+    document: false
+    file: null
+  - path: /.well-known/api-catalog
+    status: 200
+    content_type: text/html
+    document: false
+    file: null
+  - path: /.well-known/ai-plugin.json
+    status: 200
+    content_type: text/html
+    document: false
+    file: null
+  - path: /.well-known/agent-card.json
+    status: 200
+    content_type: text/html
+    document: false
+    file: null
+  - path: /.well-known/agent.json
+    status: 200
+    content_type: text/html
+    document: false
+    file: null
+- host: journeys.blng.ai
+  note: Unmatched paths return the Swagger UI HTML page (HTTP 200), not a document.
+  paths:
+  - path: /.well-known/openid-configuration
+    status: 200
+    content_type: text/html
+    document: false
+    file: null
+  - path: /.well-known/oauth-authorization-server
+    status: 200
+    content_type: text/html
+    document: false
+    file: null
+  - path: /.well-known/agent-card.json
+    status: 200
+    content_type: text/html
+    document: false
+    file: null
+- host: users.blng.ai
+  paths:
+  - path: /.well-known/openid-configuration
+    status: 404
+    file: null
+  - path: /.well-known/oauth-authorization-server
+    status: 404
+    file: null
+  - path: /.well-known/agent-card.json
+    status: 404
+    file: null
+- host: billing.blng.ai
+  paths:
+  - path: /.well-known/openid-configuration
+    status: 404
+    file: null
+  - path: /.well-known/oauth-authorization-server
+    status: 404
+    file: null
+  - path: /.well-known/agent-card.json
+    status: 404
+    file: null
+- host: auth.app.blng.ai
+  note: AWS Cognito hosted-UI custom domain.
+  paths:
+  - path: /.well-known/openid-configuration
+    status: 404
+    file: null
+  - path: /.well-known/oauth-authorization-server
+    status: 404
+    file: null
+  - path: /.well-known/agent-card.json
+    status: 404
+    file: null
+summary:
+  documents_found: 0
+  security_txt: false
+  openid_configuration: false
+  oauth_authorization_server: false
+  api_catalog: false
+  ai_plugin: false
+  agent_card: false

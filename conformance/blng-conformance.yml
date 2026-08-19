@@ -1,0 +1,107 @@
+generated: '2026-08-13'
+method: derived
+source: openapi/blng-journey-api-openapi.yml, openapi/blng-user-api-openapi.yml, openapi/blng-billing-api-openapi.yml
+searched:
+- https://trust.blng.ai/
+- https://blng.ai/privacy-policy
+- https://blng.ai/terms
+- https://blng.ai/security
+note: >-
+  BLNG publishes a Vanta-hosted trust center at trust.blng.ai, but its contents are rendered client-side
+  and no certification is readable from the served HTML — the page title and meta description are all
+  that a non-JS client gets. NO `Compliance` pointer is wired in apis.yml, because no certification is
+  named in anything a machine can read. That is a documentation gap the provider can close, not a
+  finding that they hold no certifications.
+standards:
+- id: openapi
+  conforms: true
+  version: 3.0.3 (Journey API), 3.0.1 (User API, Billing API)
+  evidence: >-
+    Three definitions served publicly and unauthenticated at https://journeys.blng.ai/swagger.yaml,
+    https://users.blng.ai/swagger.yaml and https://billing.blng.ai/swagger.yaml, each rendered by
+    Swagger UI at the host root. All three parse. 88 operations, 80 schemas.
+- id: oauth2
+  conforms: true
+  evidence: >-
+    All three specs declare a `cognitoUserAuth` oauth2 securityScheme with an implicit flow against
+    https://auth.app.blng.ai/oauth2/authorize. The User API additionally declares a client_credentials
+    machine token against https://auth.app.blng.ai/oauth2/token with scope blng/billing.
+  deviation: >-
+    The implicit grant is deprecated by OAuth 2.0 Security BCP (RFC 9700) and removed in OAuth 2.1;
+    authorization code + PKCE is the current recommendation. The scheme name says "authorization code
+    flow" while the declared flow object is `implicit` — the description and the contract disagree.
+- id: oidc
+  conforms: partial
+  evidence: >-
+    The `openid` scope is declared and identity is AWS Cognito, which is an OIDC provider. No
+    openIdConnect securityScheme is declared, and no OIDC discovery document is served from any
+    BLNG-controlled host — see well-known/blng-well-known.yml. Discovery lives on the AWS regional
+    issuer (cognito-idp.us-west-2.amazonaws.com), which BLNG does not control.
+- id: rfc9457
+  conforms: false
+  evidence: No operation returns application/problem+json; three incompatible error envelopes are in use. See errors/blng-problem-types.yml.
+- id: idempotency
+  conforms: false
+  evidence: No Idempotency-Key header and no If-Match precondition on any of the 88 operations.
+- id: pagination
+  conforms: partial
+  evidence: >-
+    Cursor pagination (pageSize + nextPageKey, default 10, max 100) on the Journey API. The User and
+    Billing APIs declare no pagination on any list operation.
+- id: conditional-requests
+  conforms: true
+  evidence: >-
+    RFC 9110 conditional GET implemented on four Journey API read operations — ETag response header,
+    If-None-Match request header, 304 Not Modified with an empty body and Cache-Control private.
+- id: rfc8594
+  conforms: false
+  evidence: >-
+    No Deprecation or Sunset response header is declared, though 17 User API operations carry the OpenAPI
+    `deprecated` flag set to true.
+- id: json-schema
+  conforms: true
+  evidence: 80 component schemas across the three specs, using oneOf polymorphism (Layer, ImageOpsRequest, ModelGenerationResponse).
+- id: pci-dss
+  conforms: n/a
+  evidence: >-
+    BLNG does not touch card data. Payment is delegated entirely to Stripe Checkout and the Stripe
+    customer portal — the Billing API only creates sessions and receives Stripe webhooks.
+- id: gdpr
+  conforms: claimed
+  evidence: >-
+    A privacy policy with a California notices section and a "Your Privacy Choices" page are published,
+    and the User API models explicit marketing consent as a first-class resource
+    (MarketingConsentReceipt with GET/PUT /users/{userId}/marketing-consent) — a consent receipt, not
+    just a boolean flag. Documentation also publishes an account data-controls page.
+  urls:
+  - https://blng.ai/privacy-policy
+  - https://blng.ai/your-privacy-choices
+  - https://docs.blng.ai/account-management/data-controls/
+- id: soc2
+  conforms: unknown
+  evidence: >-
+    A Vanta trust center is published at https://trust.blng.ai/ (HTTP 200, title "blng.ai Trust
+    Center"), which is the platform organizations use to publish SOC 2 / ISO 27001 status, but the
+    content is JS-rendered and no certification name appears in the served HTML.
+- id: fhir
+  conforms: n/a
+- id: fapi
+  conforms: n/a
+- id: scim
+  conforms: n/a
+  note: >-
+    Adjacent but not implemented — the User API models workspaces, memberships, roles and a per-workspace
+    SSO configuration (PUT /users/{userId}/workspaces/{workspaceId}/sso-config) with federated IdP
+    bindings, which is the surface SCIM would normally provision.
+- id: odata
+  conforms: false
+- id: json:api
+  conforms: false
+- id: psd2
+  conforms: n/a
+summary:
+  conforms: 4
+  partial: 2
+  fails: 5
+  not_applicable: 5
+  unknown: 1

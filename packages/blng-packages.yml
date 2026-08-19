@@ -1,0 +1,62 @@
+generated: '2026-08-13'
+method: searched
+source: >-
+  registry.npmjs.org search, pypi.org, rubygems.org, crates.io, api.nuget.org, search.maven.org,
+  proxy.golang.org, https://github.com/blng-ai, https://docs.blng.ai/
+package_count: 0
+official_sdks: 0
+note: >-
+  BLNG publishes no client libraries in any public registry, and no SDK, CLI or code sample appears
+  anywhere in its documentation — consistent with having no developer program. The npm registry search
+  for "blng" returns only unrelated third-party packages (@belong-ui/*); pypi.org/pypi/blng/json returns
+  404. The public GitHub organization github.com/blng-ai holds two repositories, neither of which is a
+  client library: `status` (the Upptime status site) and `USD-Fileformat-plugins` (C++ OpenUSD file
+  format plugins). NO `SDKs` or `Packages` pointer is wired in apis.yml, because there is nothing to
+  point at. Any integrator against the three published OpenAPI definitions must generate their own
+  client.
+packages: []
+registries_checked:
+- registry: npm
+  query: blng
+  result: no first-party package
+- registry: pypi
+  query: blng
+  result: 404
+- registry: rubygems
+  query: blng
+  result: no first-party package
+- registry: crates.io
+  query: blng
+  result: no first-party package
+- registry: nuget
+  query: blng
+  result: no first-party package
+- registry: maven-central
+  query: blng
+  result: no first-party package
+- registry: pkg.go.dev
+  query: blng
+  result: no first-party package
+open_source_surface:
+- repo: https://github.com/blng-ai/status
+  language: Markdown
+  description: BLNG System Status — uptime monitoring and incident tracking (Upptime)
+  client_library: false
+- repo: https://github.com/blng-ai/USD-Fileformat-plugins
+  language: C++
+  description: A collection of USD fileformat plugins
+  client_library: false
+  note: >-
+    Relevant to BLNG's 3D pipeline (OpenUSD asset interchange) but not a client for any BLNG API.
+x-evidence:
+- url: https://registry.npmjs.org/-/v1/search?text=blng&size=20
+  http_status: 200
+  fetched: '2026-08-13'
+  finding: no first-party BLNG package
+- url: https://pypi.org/pypi/blng/json
+  http_status: 404
+  fetched: '2026-08-13'
+- url: https://github.com/blng-ai
+  http_status: 200
+  fetched: '2026-08-13'
+  finding: two public repositories, neither a client library

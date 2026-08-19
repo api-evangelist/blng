@@ -1,0 +1,59 @@
+overlay: 1.0.0
+info:
+  title: API Evangelist enhancements for the BLNG Billing API
+  version: 1.0.0
+x-provenance:
+  generated: '2026-08-13'
+  method: generated
+  source: openapi/blng-billing-api-openapi.yml
+  note: >-
+    Extends openapi/blng-billing-api-openapi.yml, the provider's own definition saved verbatim from
+    https://billing.blng.ai/swagger.yaml. The original is never mutated. Adds the absolute server the
+    provider omitted, and records the one operation that answers without authentication.
+extends: openapi/blng-billing-api-openapi.yml
+actions:
+- target: $.info
+  update:
+    contact:
+      name: BLNG Support
+      email: support@blng.ai
+      url: https://portal.blng.ai/
+    x-api-evangelist:
+      profile: https://apis.io/providers/blng
+      enriched: '2026-08-13'
+      spec_source: https://billing.blng.ai/swagger.yaml
+      spec_source_status: 200
+      developer_program: none
+- target: $
+  update:
+    servers:
+    - url: https://billing.blng.ai
+      description: >-
+        Production. The provider's definition declares no servers[] block; this base is confirmed by GET
+        https://billing.blng.ai/billing/products returning 200 with live Stripe product objects.
+- target: $.paths['/billing/products'].get
+  update:
+    x-api-evangelist-note: >-
+      Verified anonymous on 2026-08-13: GET https://billing.blng.ai/billing/products returns HTTP 200
+      with the live Stripe product and price catalog without a bearer token. It is the only operation in
+      the three BLNG definitions that answers unauthenticated, and it is the machine-readable source
+      behind plans/blng-plans-pricing.yml.
+    x-agentic-access:
+      action_class: read
+      consequence: none
+      auth_required: false
+- target: $.info
+  update:
+    x-conventions:
+      authentication: AWS Cognito bearer JWT; billing writes additionally require the OWNER or BILLING_ADMIN workspace role
+      payment_processor: Stripe — BLNG never handles card data; checkout and the customer portal are Stripe-hosted
+      webhook_direction: inbound only (Stripe -> BLNG); there is no consumer-subscribable event surface
+      idempotency: >-
+        none — createCheckoutSession and confirmCheckout carry no Idempotency-Key, which matters more
+        here than elsewhere because these operations move money
+      error_format: not RFC 9457
+      artifacts:
+        plans: plans/blng-plans-pricing.yml
+        conventions: conventions/blng-conventions.yml
+        errors: errors/blng-problem-types.yml
+        webhooks: asyncapi/blng-webhooks.yml

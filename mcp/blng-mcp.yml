@@ -1,0 +1,106 @@
+generated: '2026-08-13'
+method: derived
+source: openapi/blng-journey-api-openapi.yml, openapi/blng-billing-api-openapi.yml
+status: candidate
+searched:
+- https://mcp.blng.ai/ (DNS does not resolve)
+- https://blng.ai/mcp (404)
+- https://docs.blng.ai/ (no MCP mention in any of the 70 documentation pages)
+- https://github.com/blng-ai (2 repositories, no MCP server)
+- npm registry search "blng" (no first-party package)
+note: >-
+  BLNG ships NO MCP server — not hosted, not stdio, not in any registry. mcp.blng.ai does not resolve,
+  /mcp 404s on both the marketing and documentation hosts, and neither public repository is a server.
+  NO `MCPServer` pointer is wired in apis.yml: this file is a derived candidate showing what a server
+  over the published contracts could look like, not a surface the provider offers. Never treat the tools
+  below as callable.
+deployment:
+  mode: none
+  endpoint: null
+  install: null
+  package: null
+  auth: unknown
+  verified: searched
+  note: >-
+    Nobody ships a server. If BLNG built one it would inherit the existing auth model — an AWS Cognito
+    bearer JWT from https://auth.app.blng.ai — which is user-interactive (implicit flow), so a hosted
+    remote server would need an authorization-code/PKCE or client-credentials path that does not exist
+    today.
+candidate_tools:
+  derived_from: OpenAPI operationIds
+  count: 12
+  selection: >-
+    The read and create operations an agent could plausibly drive. Deliberately excludes destructive
+    operations (deleteJourney, deleteImage) and every billing write, since createCheckoutSession moves
+    money and the contract has no idempotency key to make a retry safe.
+  tools:
+  - name: list_journeys
+    rest: [getJourneys]
+    operation: GET /journeys
+    description: List or search a user's design and shopping journeys, with cursor pagination.
+    action_class: read
+  - name: get_journey
+    rest: [getJourney]
+    operation: GET /journeys/{journeyId}
+    description: Retrieve one journey including its canvas specifics and layers.
+    action_class: read
+  - name: start_journey
+    rest: [startNewJourney]
+    operation: POST /journeys
+    description: Start a new design or shopping journey.
+    action_class: create
+  - name: list_journey_prompts
+    rest: [getPromptsForJourney]
+    operation: GET /journeys/{journeyId}/prompts
+    description: List the prompts submitted against a journey.
+    action_class: read
+  - name: submit_chat_prompt
+    rest: [submitChatPromptV3]
+    operation: POST /design/journeys/{journeyId}/chat-prompt-v3
+    description: Submit a design prompt against a journey. Subject to a per-user concurrency limit (429 CONCURRENCY_LIMIT_EXCEEDED).
+    action_class: create
+  - name: list_design_plans
+    rest: [listDesignPlansForJourney]
+    operation: GET /design/journeys/{journeyId}/plans
+    description: List the multi-stage design plans generated for a journey.
+    action_class: read
+  - name: list_journey_images
+    rest: [getAllImagesForJourney]
+    operation: GET /design/journeys/{journeyId}/images
+    description: List every image belonging to a journey.
+    action_class: read
+  - name: get_image_download_url
+    rest: [generateImageDownloadUrl]
+    operation: GET /design/journeys/{journeyId}/images/{imageId}/download
+    description: Issue a short-lived presigned download URL for a journey image.
+    action_class: read
+  - name: list_assets
+    rest: [listAssetsForUser]
+    operation: GET /design/assets
+    description: List a user's stored assets.
+    action_class: read
+  - name: list_model_generations
+    rest: [listModelGenerations]
+    operation: GET /design/journeys/{journeyId}/generations
+    description: List 3D model generation jobs for a journey and their terminal state.
+    action_class: read
+  - name: get_model_generation
+    rest: [getModelGeneration]
+    operation: GET /design/journeys/{journeyId}/generations/{generationId}
+    description: Poll one asynchronous 3D model generation job.
+    action_class: read
+  - name: list_products
+    rest: [GET /billing/products]
+    operation: GET /billing/products
+    description: List the live Stripe product and price catalog. The only BLNG operation that answers unauthenticated.
+    action_class: read
+    auth_required: false
+agent_readiness_blockers:
+- No MCP server and no agent card.
+- >-
+  The only declared OAuth flow is `implicit`, which requires a browser redirect and returns a token in a
+  URL fragment — an autonomous agent cannot complete it. There is no authorization-code+PKCE or
+  client-credentials path published for third parties.
+- No idempotency key on any write, so an agent cannot safely retry a create.
+- No rate-limit headers and no Retry-After, so an agent cannot compute a backoff.
+- No llms.txt and no /.well-known/ documents on any BLNG host.

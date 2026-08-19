@@ -30,7 +30,7 @@ accessModel:
   - https://billing.blng.ai/billing/products
   generated: '2026-08-13'
   method: probed
-specificationVersion: '0.21'
+specificationVersion: '0.23'
 created: '2026-07-17'
 modified: '2026-08-13'
 image: https://cdn.sanity.io/images/4x3qe5zn/production/5354c7992cf9027bbe7400e2c4079f2c46e40cd8-4800x2520.png?w=1200&h=630

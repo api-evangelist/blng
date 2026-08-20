@@ -44,6 +44,21 @@ tags:
 - Marketing
 - Retail
 - 3D Models
+- Image-Generation
+- Workspaces
+- Billing
+- OpenAPI
+- AWS Cognito
+tags_raw:
+- Company
+- Jewelry
+- Generative AI
+- Design
+- Creative Tools
+- Rendering
+- Marketing
+- Retail
+- 3D Models
 - Image Generation
 - Workspaces
 - Billing
@@ -60,6 +75,12 @@ apis:
   humanURL: https://journeys.blng.ai/
   baseURL: https://journeys.blng.ai/v2
   tags:
+  - Design
+  - Generative AI
+  - Image-Generation
+  - 3D Models
+  - Jewelry
+  tags_raw:
   - Design
   - Generative AI
   - Image Generation
@@ -83,6 +104,12 @@ apis:
   baseURL: https://users.blng.ai
   tags:
   - Workspaces
+  - User
+  - Organization
+  - Subscription
+  - SSO
+  tags_raw:
+  - Workspaces
   - Users
   - Organizations
   - Subscriptions
@@ -103,6 +130,11 @@ apis:
   humanURL: https://billing.blng.ai/
   baseURL: https://billing.blng.ai
   tags:
+  - Billing
+  - Payments
+  - Stripe
+  - Subscription
+  tags_raw:
   - Billing
   - Payments
   - Stripe

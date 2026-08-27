@@ -65,41 +65,13 @@ tags_raw:
 - OpenAPI
 - AWS Cognito
 apis:
-- name: BLNG Journey API
-  description: >-
-    REST API behind the BLNG Design application that manages design and shopping journeys, the prompts
-    submitted against them, uploaded and generated image assets, chat prompts, design plans, and 3D model
-    generation and conversion. Supports free-text search over journeys, cursor pagination via nextPageKey,
-    and conditional GETs with ETag / If-None-Match. Authenticated with an AWS Cognito access or id token
-    as a bearer JWT.
-  humanURL: https://journeys.blng.ai/
-  baseURL: https://journeys.blng.ai/v2
-  tags:
-  - Design
-  - Generative AI
-  - Image-Generation
-  - 3D Models
-  - Jewelry
-  tags_raw:
-  - Design
-  - Generative AI
-  - Image Generation
-  - 3D Models
-  - Jewelry
-  properties:
-  - type: OpenAPI
-    url: openapi/blng-journey-api-openapi.yml
-  - type: APIReference
-    url: https://journeys.blng.ai/
-  - type: Overlay
-    url: overlays/blng-journey-api-overlay.yaml
 - name: BLNG User API
   description: >-
     REST API that manages BLNG users, roles and permissions, workspaces and workspace members, workspace
     and subscription invitations, organizations, SSO configuration, marketing consent, tooltips, and user
-    subscriptions. Also exposes composite operations that create an organization, subscription and user in
-    a single call. Authenticated with AWS Cognito user tokens, plus a client-credentials machine token for
-    the billing integration.
+    subscriptions. Also exposes composite operations that create an organization, subscription and user
+    in a single call. Authenticated with AWS Cognito user tokens, plus a client-credentials machine token
+    for the billing integration.
   humanURL: https://users.blng.ai/
   baseURL: https://users.blng.ai
   tags:
@@ -124,9 +96,9 @@ apis:
 - name: BLNG Billing API
   description: >-
     REST API that manages BLNG payment and billing — listing Stripe products and prices, creating Stripe
-    checkout sessions and customer-portal sessions, confirming checkout, and submitting enterprise
-    "contact sales" inquiries. Also declares three Stripe webhook receivers for checkout completion and
-    subscription update/delete. The product catalog endpoint answers unauthenticated.
+    checkout sessions and customer-portal sessions, confirming checkout, and submitting enterprise "contact
+    sales" inquiries. Also declares three Stripe webhook receivers for checkout completion and subscription
+    update/delete. The product catalog endpoint answers unauthenticated.
   humanURL: https://billing.blng.ai/
   baseURL: https://billing.blng.ai
   tags:
@@ -146,12 +118,158 @@ apis:
     url: https://billing.blng.ai/
   - type: Overlay
     url: overlays/blng-billing-api-overlay.yaml
+- aid: blng:blng-chat-prompts-api
+  name: Blng Chat Prompts API
+  description: The Chat Prompts API from Blng — 2 operation(s) for chat prompts.
+  humanURL: https://journeys.blng.ai/
+  baseURL: https://journeys.blng.ai/v2
+  tags:
+  - Chat Prompts
+  properties:
+  - type: OpenAPI
+    url: openapi/blng-chat-prompts-api-openapi.yml
+  - type: APIReference
+    url: https://journeys.blng.ai/
+- aid: blng:blng-composite-api
+  name: Blng Composite API
+  description: The Composite API from Blng — 2 operation(s) for composite.
+  humanURL: https://journeys.blng.ai/
+  baseURL: https://journeys.blng.ai/v2
+  tags:
+  - Composite
+  properties:
+  - type: OpenAPI
+    url: openapi/blng-composite-api-openapi.yml
+  - type: APIReference
+    url: https://journeys.blng.ai/
+- aid: blng:blng-design-journey-api
+  name: Blng Design Journey API
+  description: The Design Journey API from Blng — 16 operation(s) for design journey.
+  humanURL: https://journeys.blng.ai/
+  baseURL: https://journeys.blng.ai/v2
+  tags:
+  - Design Journey
+  properties:
+  - type: OpenAPI
+    url: openapi/blng-design-journey-api-openapi.yml
+  - type: APIReference
+    url: https://journeys.blng.ai/
+- aid: blng:blng-invitation-api
+  name: Blng Invitation API
+  description: The Invitation API from Blng — 5 operation(s) for invitation.
+  humanURL: https://journeys.blng.ai/
+  baseURL: https://journeys.blng.ai/v2
+  tags:
+  - Invitation
+  properties:
+  - type: OpenAPI
+    url: openapi/blng-invitation-api-openapi.yml
+  - type: APIReference
+    url: https://journeys.blng.ai/
+- aid: blng:blng-journeys-api
+  name: Blng Journeys API
+  description: The Journeys API from Blng — 6 operation(s) for journeys.
+  humanURL: https://journeys.blng.ai/
+  baseURL: https://journeys.blng.ai/v2
+  tags:
+  - Journeys
+  properties:
+  - type: OpenAPI
+    url: openapi/blng-journeys-api-openapi.yml
+  - type: APIReference
+    url: https://journeys.blng.ai/
+- aid: blng:blng-organization-api
+  name: Blng Organization API
+  description: The Organization API from Blng — 3 operation(s) for organization.
+  humanURL: https://journeys.blng.ai/
+  baseURL: https://journeys.blng.ai/v2
+  tags:
+  - Organization
+  properties:
+  - type: OpenAPI
+    url: openapi/blng-organization-api-openapi.yml
+  - type: APIReference
+    url: https://journeys.blng.ai/
+- aid: blng:blng-prompts-api
+  name: Blng Prompts API
+  description: The Prompts API from Blng — 4 operation(s) for prompts.
+  humanURL: https://journeys.blng.ai/
+  baseURL: https://journeys.blng.ai/v2
+  tags:
+  - Prompts
+  properties:
+  - type: OpenAPI
+    url: openapi/blng-prompts-api-openapi.yml
+  - type: APIReference
+    url: https://journeys.blng.ai/
+- aid: blng:blng-subscription-api
+  name: Blng Subscription API
+  description: The Subscription API from Blng — 4 operation(s) for subscription.
+  humanURL: https://journeys.blng.ai/
+  baseURL: https://journeys.blng.ai/v2
+  tags:
+  - Subscription
+  properties:
+  - type: OpenAPI
+    url: openapi/blng-subscription-api-openapi.yml
+  - type: APIReference
+    url: https://journeys.blng.ai/
+- aid: blng:blng-user-subscription-api
+  name: Blng User Subscription API
+  description: The User Subscription API from Blng — 3 operation(s) for user subscription.
+  humanURL: https://journeys.blng.ai/
+  baseURL: https://journeys.blng.ai/v2
+  tags:
+  - User Subscription
+  properties:
+  - type: OpenAPI
+    url: openapi/blng-user-subscription-api-openapi.yml
+  - type: APIReference
+    url: https://journeys.blng.ai/
+- aid: blng:blng-user-tooltip-api
+  name: Blng User Tooltip API
+  description: The User Tooltip API from Blng — 2 operation(s) for user tooltip.
+  humanURL: https://journeys.blng.ai/
+  baseURL: https://journeys.blng.ai/v2
+  tags:
+  - User Tooltip
+  properties:
+  - type: OpenAPI
+    url: openapi/blng-user-tooltip-api-openapi.yml
+  - type: APIReference
+    url: https://journeys.blng.ai/
+- aid: blng:blng-webhook-api
+  name: Blng Webhook API
+  description: The Webhook API from Blng — 3 operation(s) for webhook.
+  humanURL: https://journeys.blng.ai/
+  baseURL: https://journeys.blng.ai/v2
+  tags:
+  - Webhook
+  properties:
+  - type: OpenAPI
+    url: openapi/blng-webhook-api-openapi.yml
+  - type: APIReference
+    url: https://journeys.blng.ai/
+- aid: blng:blng-workspace-api
+  name: Blng Workspace API
+  description: The Workspace API from Blng — 15 operation(s) for workspace.
+  humanURL: https://journeys.blng.ai/
+  baseURL: https://journeys.blng.ai/v2
+  tags:
+  - Workspace
+  properties:
+  - type: OpenAPI
+    url: openapi/blng-workspace-api-openapi.yml
+  - type: APIReference
+    url: https://journeys.blng.ai/
 maintainers:
 - FN: Kin Lane
   email: kin@apievangelist.com
 - FN: APIs.json
   email: info@apis.io
 common:
+- type: Overlay
+  url: overlays/blng-journey-api-overlay.yaml
 - type: AgenticAccess
   url: agentic-access/blng-agentic-access.yml
 - type: DomainSecurity

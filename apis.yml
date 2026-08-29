@@ -280,6 +280,9 @@ maintainers:
 - FN: APIs.json
   email: info@apis.io
 common:
+- type: CapabilityMap
+  url: capabilities/blng-capability-edges.yml
+  name: Blng Business Capability Map
 - type: Overlay
   url: overlays/blng-journey-api-overlay.yaml
 - type: AgenticAccess

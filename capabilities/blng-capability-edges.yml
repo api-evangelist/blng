@@ -1,0 +1,46 @@
+slug: blng
+provider: Blng
+generated_by: planning/capability-mapping/scripts/classify_capabilities.py
+model: claude-opus-5
+frame:
+- Retail & Consumer Goods
+min_confidence: 0.7
+capability_model:
+  source: https://github.com/vincentmakes/turbo-ea-capabilities
+  license: CC-BY-4.0
+  attribution: Turbo EA Capabilities by Vincent Verdet — Turbo EA, https://github.com/vincentmakes/turbo-ea-capabilities,
+    CC BY 4.0
+  notice: NOTICE
+edge_count: 3
+edges:
+- tag: Subscription
+  spec_file: blng-subscription-api-openapi.yml
+  capability_id: BC-4240
+  capability_id_l1: BC-4240
+  capability_name: Subscription Lifecycle Management
+  confidence: 0.78
+  evidence: POST /subscriptions Create subscription; PUT /subscriptions/{subscriptionId} Update subscription;
+    "Subscription type is starter"; schema Entitlements
+  reason: Creation, retrieval and modification of subscriptions with entitlements is squarely subscription
+    lifecycle management; L2 left null because create/update spans provisioning and in-life modification.
+- tag: Billing
+  spec_file: blng-billing-api-openapi.yml
+  capability_id: BC-4250
+  capability_id_l1: BC-4250
+  capability_name: Subscription Billing & Revenue Management
+  confidence: 0.75
+  evidence: '"Api to manage user''s payment and billing"; "Create Stripe''s checkout session (aka as payment
+    link)"; "Retrieve available products and their prices"'
+  reason: Operations perform checkout/payment collection and price/product plan retrieval for the vendor's
+    SaaS subscriptions — subscription billing and revenue management. Sub-capability ambiguous (payment
+    collection vs invoicing/plan pricing), so L1 only.
+- tag: User Subscription
+  spec_file: blng-user-subscription-api-openapi.yml
+  capability_id: BC-4240.70
+  capability_id_l1: BC-4240
+  capability_name: Entitlement Enforcement
+  confidence: 0.7
+  evidence: '"Associate a subscription with a user"; schemas: UserSubscriptionView, Entitlements'
+  reason: Operations associate subscriptions and entitlements with users — subscription lifecycle/entitlement
+    management for a SaaS product. Sub-capability between provisioning and entitlement enforcement is
+    somewhat ambiguous, hence moderate confidence.

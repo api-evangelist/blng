@@ -1,0 +1,300 @@
+openapi: 3.2.0
+info:
+  title: User Invitation API
+  description: Api to manage roles and permissions of users
+  version: 1.0.0
+servers:
+- url: https://users.blng.ai
+  description: Base URL declared by the provider in apis.yml (roadmap#122).
+tags:
+- name: Invitation
+paths:
+  /invitations:
+    post:
+      tags:
+      - Invitation
+      summary: create invitation
+      deprecated: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              - inviterId
+              - subscriptionId
+              - role
+              example:
+                email: jeanette.le+vp@blng.ai
+                inviterId: test
+                subscriptionId: '1234'
+                role: VIEWER
+      responses:
+        '201':
+          description: Invitation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invitation'
+        '400':
+          description: Bad Request
+        '409':
+          description: Conflict (e.g., invitation already exists)
+        '500':
+          description: Internal Server Error
+    get:
+      tags:
+      - Invitation
+      summary: get by email
+      deprecated: true
+      parameters:
+      - name: email
+        in: query
+        schema:
+          type: string
+        example: jeanette.le%2Bmars%40blng.ai
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invitation'
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error
+  /invitations/{invitationId}:
+    get:
+      tags:
+      - Invitation
+      summary: get invitation
+      deprecated: true
+      parameters:
+      - name: invitationId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for Invitation
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invitation'
+        '400':
+          description: Bad Request
+        '404':
+          description: Invitation not found
+        '500':
+          description: Internal Server Error
+    put:
+      tags:
+      - Invitation
+      summary: update invitation
+      deprecated: true
+      parameters:
+      - name: invitationId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for Invitation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                inviterId: test
+                subscriptionId: '1234'
+                role: EDITOR
+      responses:
+        '200':
+          description: Invitation updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invitation'
+        '400':
+          description: Bad Request
+        '404':
+          description: Invitation not found
+        '409':
+          description: Conflict (e.g. invalid update state)
+        '500':
+          description: Internal Server Error
+    delete:
+      tags:
+      - Invitation
+      summary: delete invitation
+      deprecated: true
+      parameters:
+      - name: invitationId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for Invitation
+      responses:
+        '204':
+          description: Invitation deleted
+          content:
+            application/json: {}
+        '400':
+          description: Bad Request
+        '404':
+          description: Invitation not found
+        '500':
+          description: Internal Server Error
+  /invitations/{invitationId}/resend:
+    post:
+      tags:
+      - Invitation
+      summary: resend invitation
+      deprecated: true
+      parameters:
+      - name: invitationId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for Invitation
+      responses:
+        '200':
+          description: Invitation resent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invitation'
+        '400':
+          description: Bad Request
+        '404':
+          description: Invitation not found
+        '500':
+          description: Internal Server Error
+  /invitations/{invitationId}/accept:
+    post:
+      tags:
+      - Invitation
+      summary: accept invitation
+      deprecated: true
+      parameters:
+      - name: invitationId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for Invitation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                email: jeanette.le%2Bmars%40blng.ai
+                userId: test
+              required:
+              - email
+              - userId
+      responses:
+        '200':
+          description: Invitation accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invitation'
+        '400':
+          description: Bad Request
+        '404':
+          description: Invitation not found
+        '409':
+          description: Conflict (e.g., user already accepted)
+        '500':
+          description: Internal Server Error
+  /invitations/subscriptions/{subscriptionId}:
+    get:
+      tags:
+      - Invitation
+      summary: get invitations
+      deprecated: true
+      parameters:
+      - name: subscriptionId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for Subscription
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invitation'
+        '400':
+          description: Bad Request
+        '404':
+          description: Subscription not found
+        '500':
+          description: Internal Server Error
+components:
+  schemas:
+    Invitation:
+      type: object
+      properties:
+        invitationId:
+          type: string
+          description: Unique identifier for invitation
+        subscriptionId:
+          type: string
+          description: Unique identifier for the subscription
+        inviterId:
+          type: string
+          description: UserId of inviter
+        role:
+          type: string
+          enum:
+          - OWNER
+          - BILLING_ADMIN
+          - ADMIN
+          - EDITOR
+          - VIEWER
+          description: Role of invitee to be assigned to
+        email:
+          type: string
+          description: Email of invitee
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of when invitation was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last update to invitation
+  securitySchemes:
+    cognitoUserAuth:
+      type: oauth2
+      description: Cognito authorization code flow for users
+      flows:
+        implicit:
+          authorizationUrl: https://auth.app.blng.ai/oauth2/authorize
+          scopes:
+            email: email
+            profile: profile
+            openid: openid
+            aws.cognito.signin.user.admin: aws.cognito.signin.user.admin
+    machineBearerToken:
+      type: http
+      description: 'Cognito authorization code flow for billing token, request token with command like `curl -X POST https://auth.app.blng.ai/oauth2/token -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=client_credentials&client_id=7arq76lejqmgq3qc556vr7rupn&client_secret=CLIENT_SECRET&scope=blng/billing"`
+
+        '
+      scheme: bearer
+      bearerFormat: JWT Access Token

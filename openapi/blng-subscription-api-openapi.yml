@@ -1,0 +1,477 @@
+openapi: 3.2.0
+info:
+  title: User Subscription API
+  description: Api to manage roles and permissions of users
+  version: 1.0.0
+servers:
+- url: https://users.blng.ai
+  description: Base URL declared by the provider in apis.yml (roadmap#122).
+tags:
+- name: Subscription
+paths:
+  /subscriptions:
+    post:
+      tags:
+      - Subscription
+      summary: Create subscription
+      deprecated: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                name: Jeanette's Subscription 2
+              properties:
+                name:
+                  type: string
+                  description: Human-friendly subscription name
+                ownerId:
+                  type: string
+                  description: id of owner of the subscription
+                ownerType:
+                  type: string
+                  enum:
+                  - user
+                  - organization
+                  description: Type of owner of the subscription
+                subscriptionType:
+                  type: string
+                  enum:
+                  - starter
+                  - pro
+                  - team
+                  - enterprise
+                  - beta
+                  description: Type of subscription
+                stripeSubscriptionId:
+                  type: string
+                  description: Stripe subscription ID
+                stripeCustomerId:
+                  type: string
+                  description: Stripe customer ID associated with owner
+                seatsPurchased:
+                  type: integer
+                  description: Number of seats purchased
+                paymentSource:
+                  type: string
+                  enum:
+                  - stripe
+                  - apple
+                  description: Payment source for subscription. Always stripe for now.
+              required:
+              - name
+              - ownerId
+              - ownerType
+              - subscriptionType
+      responses:
+        '201':
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error
+  /subscriptions/{subscriptionId}:
+    get:
+      tags:
+      - Subscription
+      summary: Get subscription
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: subscriptionId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for Subscription
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '400':
+          description: Bad Request
+        '404':
+          description: Subscription not found
+        '500':
+          description: Internal Server Error
+    put:
+      tags:
+      - Subscription
+      summary: Update subscription
+      security:
+      - machineBearerToken:
+        - blng/billing
+      parameters:
+      - name: subscriptionId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for Subscription
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              example: "{\n  \"name\": \"New Subscription Name\"\n}\n"
+      responses:
+        '200':
+          description: Subscription updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '400':
+          description: Bad Request
+        '404':
+          description: Subscription not found
+        '500':
+          description: Internal Server Error
+  /composite/createOrgAndSubscriptionWithUser:
+    post:
+      tags:
+      - Subscription
+      summary: Creates an organization, a subscription, and a user, and attaches them in one transaction
+      deprecated: true
+      description: 'Creates a new organization , a new subscription , and attaches an existing user to the subscription with an admin role. This is **not strictly REST** because it handles multiple resources in one call, but it simplifies our client needs
+
+        '
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                organizationName:
+                  type: string
+                  description: Name of the organization
+                subscriptionName:
+                  type: string
+                  description: Subscription name to create or attach
+                userId:
+                  type: string
+                  description: Unique identifier for the User
+              required:
+              - organizationName
+              - subscriptionName
+              - userId
+              example:
+                organizationName: BigCo Inc.
+                subscriptionName: My Super Subscription
+                userId: abc123
+      responses:
+        '201':
+          description: Composite creation succeeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  organization:
+                    $ref: '#/components/schemas/Organization'
+                  subscription:
+                    $ref: '#/components/schemas/Subscription'
+                  userId:
+                    type: string
+                    description: Unique identifier for the User
+        '400':
+          description: Bad Request
+        '404':
+          description: User not found
+        '409':
+          description: Conflict (e.g., organization or subscription already exists in a conflicting state)
+        '500':
+          description: Internal Server Error
+  /composite/createUserAndSubscription:
+    post:
+      tags:
+      - Subscription
+      summary: Creates a user, a subscription, and attaches them in one transaction. Subscription type is starter.
+      deprecated: true
+      description: 'Creates a new user (if not exists) and a new subscription (if not exists), and attaches the user to the subscription with the specified roles. This is **not strictly REST** because it handles multiple resources in one call, but it simplifies our client needs
+
+        '
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                userId:
+                  type: string
+                  description: Unique identifier for the User
+                email:
+                  type: string
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                subscriptionName:
+                  type: string
+                  description: Subscription name to create or attach
+                roles:
+                  type: array
+                  items:
+                    type: string
+                  description: Roles to assign to the user in this subscription
+              required:
+              - userId
+              - email
+              - subscriptionName
+              example:
+                userId: abc123
+                email: test@example.com
+                firstName: Jane
+                lastName: Doe
+                subscriptionName: My Super Subscription
+                roles:
+                - OWNER
+      responses:
+        '201':
+          description: Composite creation succeeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  subscription:
+                    $ref: '#/components/schemas/Subscription'
+        '400':
+          description: Bad Request
+        '409':
+          description: Conflict (e.g., user or subscription already exists in a conflicting state)
+        '500':
+          description: Internal Server Error
+components:
+  schemas:
+    Organization:
+      type: object
+      properties:
+        organizationId:
+          type: string
+          description: Unique identifier for the organization
+        name:
+          type: string
+          description: Name of the organization
+        stripeCustomerId:
+          type: string
+          description: Stripe customer ID
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the organization was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last update to organization
+    Entitlements:
+      type: object
+      properties:
+        maxJourneys:
+          type: integer
+          description: Maximum number of journeys allowed on a subscription. -1 for unlimited.
+        chatVisibilityWindowHrs:
+          type: integer
+          description: Maximum number of hours to let a user look back in chat history. -1 for unlimited.
+    User:
+      type: object
+      properties:
+        userId:
+          type: string
+          description: Unique identifier for the user
+        email:
+          type: string
+          description: Email of the user
+        firstName:
+          type: string
+          description: First name of the user
+        lastName:
+          type: string
+          description: Last name of the user
+        companyName:
+          type: string
+          description: Optional company name (app metadata, not auth)
+        profilePictureUrl:
+          type: string
+          description: Profile image URL (e.g. from federated IdP), synced on login
+        stripeCustomerId:
+          type: string
+          description: Stripe customer ID
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the user was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last update to user
+        welcomeEmailSent:
+          type: boolean
+          description: Whether the welcome email has been sent
+          deprecated: true
+        welcomeEmailStatus:
+          type: string
+          enum:
+          - SENT
+          - NOT_SENT
+          - IN_PROGRESS
+          description: Status of the welcome email
+        tooltipFlowIdsViewed:
+          type: array
+          items:
+            type: string
+          description: Id of all tooltip flows marked as viewed
+        activeWorkspaceId:
+          type: string
+          format: uuid
+          description: Current workspace context (multi-tenancy); set via PUT /users/{userId}/active-workspace
+        allowedWorkspaces:
+          type: integer
+          minimum: 1
+          description: 'Ops-only override (DynamoDB): max workspaces this user may own via POST /users/{userId}/workspaces. Omitted on normal users; overrides the stage default (typically 3). Not settable via public PUT /users.'
+        marketingConsent:
+          $ref: '#/components/schemas/MarketingConsentReceipt'
+        marketingConsentPromptedAt:
+          type: string
+          format: date-time
+          description: Set when the one-time consent prompt was shown and closed without an answer. Suppresses further prompting without recording a choice the user never made. Mutually exclusive with marketingConsent. Set via PUT /users/{userId}/marketing-consent.
+        signUpPending:
+          type: boolean
+          enum:
+          - true
+          description: Present only while an account is still going through sign-up and has not resolved the marketing consent ask. Written by account creation, cleared by the first consent write, and absent on every row created before it was introduced. Not settable via any API.
+    Subscription:
+      type: object
+      properties:
+        subscriptionId:
+          type: string
+          description: Unique identifier for the subscription
+        name:
+          type: string
+          description: Human-friendly subscription name
+        ownerId:
+          type: string
+          description: id of owner of the subscription
+        ownerType:
+          type: string
+          enum:
+          - user
+          - organization
+          description: Type of owner of the subscription
+        subscriptionType:
+          type: string
+          enum:
+          - starter
+          - pro
+          - team
+          - enterprise
+          - beta
+          description: Type of subscription
+        stripeSubscriptionId:
+          type: string
+          description: Stripe subscription ID
+        stripeCustomerId:
+          type: string
+          description: Stripe customer ID associated with owner
+        seatsPurchased:
+          type: integer
+          description: Number of seats purchased
+        paymentSource:
+          type: string
+          enum:
+          - stripe
+          - apple
+          description: Payment source for subscription. Always stripe for now.
+        status:
+          type: string
+          enum:
+          - active
+          - canceled
+          - incomplete
+          - incomplete_expired
+          - paused
+          - past_due
+          - trialing
+          - unpaid
+          description: Status of subscription. Maps to stripe status.
+        cancelAtPeriodEnd:
+          type: boolean
+          description: Whether the subscription will be canceled at the end of the current period
+        currentPeriodEnd:
+          type: string
+          format: date-time
+          description: Timestamp of when the current period ends
+        canceledAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the subscription was canceled
+        entitlements:
+          $ref: '#/components/schemas/Entitlements'
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the subscription was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last update to subscription
+    MarketingConsentReceipt:
+      type: object
+      description: Marketing opt-in receipt (GDPR consent provenance). Present only for users who made an explicit choice; optIn records that choice either way. Synced to HubSpot as the marketing_opt_in contact property. Absent for users who have never been asked or who dismissed the prompt.
+      required:
+      - optIn
+      - timestamp
+      - wordingVersion
+      - captureLocation
+      properties:
+        optIn:
+          type: boolean
+          description: The user's choice
+        timestamp:
+          type: string
+          format: date-time
+          description: When the choice was captured. Server-stamped; never accepted from the caller.
+        wordingVersion:
+          type: string
+          description: Version tag of the exact consent wording shown, so the receipt survives copy changes
+        captureLocation:
+          type: string
+          description: Which surface captured the choice. `email-unsubscribe` and `email-spam-complaint` are withdrawals the recipient made against mail we sent, the first through an unsubscribe link and the second by reporting it to their provider. Both are recorded from the CRM's own subscription-change events rather than through this API.
+          enum:
+          - signup
+          - first-login-prompt
+          - settings
+          - email-unsubscribe
+          - email-spam-complaint
+  securitySchemes:
+    cognitoUserAuth:
+      type: oauth2
+      description: Cognito authorization code flow for users
+      flows:
+        implicit:
+          authorizationUrl: https://auth.app.blng.ai/oauth2/authorize
+          scopes:
+            email: email
+            profile: profile
+            openid: openid
+            aws.cognito.signin.user.admin: aws.cognito.signin.user.admin
+    machineBearerToken:
+      type: http
+      description: 'Cognito authorization code flow for billing token, request token with command like `curl -X POST https://auth.app.blng.ai/oauth2/token -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=client_credentials&client_id=7arq76lejqmgq3qc556vr7rupn&client_secret=CLIENT_SECRET&scope=blng/billing"`
+
+        '
+      scheme: bearer
+      bearerFormat: JWT Access Token

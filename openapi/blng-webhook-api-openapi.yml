@@ -1,0 +1,162 @@
+openapi: 3.2.0
+info:
+  title: Billing Webhook API
+  description: Api to manage user's payment and billing
+  version: 1.0.0
+servers:
+- url: https://billing.blng.ai
+  description: Base URL declared by the provider in apis.yml (roadmap#122).
+tags:
+- name: Webhook
+paths:
+  /billing/webhook/checkoutSessionCompleted:
+    post:
+      tags:
+      - Webhook
+      summary: Webhook to handle checkout session completed event
+      description: Processes Stripe checkout session completion events and updates the billing information accordingly.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutSessionCompletedRequest'
+      responses:
+        '200':
+          description: Successfully processed checkout session event
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Checkout session processed successfully
+                  received:
+                    type: boolean
+                    example: true
+        '400':
+          description: Invalid request parameters
+        '500':
+          description: Internal server error
+  /billing/webhook/customerSubscriptionUpdated:
+    post:
+      tags:
+      - Webhook
+      summary: Webhook to handle customer subscription updates
+      description: Processes Stripe subscription updates and adjusts user subscriptions accordingly.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StripeSubscription'
+      responses:
+        '200':
+          description: Successfully processed subscription update
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                    example: true
+        '400':
+          description: Invalid request parameters
+        '500':
+          description: Internal server error
+  /billing/webhook/customerSubscriptionDeleted:
+    post:
+      tags:
+      - Webhook
+      summary: Webhook to handle customer subscription deletion
+      description: Processes Stripe subscription deletion events and updates the billing information accordingly.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StripeSubscription'
+      responses:
+        '200':
+          description: Successfully processed subscription deletion
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                    example: true
+        '400':
+          description: Invalid request parameters
+        '500':
+          description: Internal server error
+components:
+  schemas:
+    StripeSubscription:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The ID of the stripe subscription being updated
+          example: subId-xxx
+        status:
+          type: string
+          description: Status of the subscription
+          example: active
+        items:
+          type: array
+          description: List of subscription items
+          items:
+            type: object
+            properties:
+              priceId:
+                type: string
+                description: The ID of the price associated with the subscription
+                example: price_12345
+              data:
+                type: array
+                description: List of subscription items
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: Unique identifier for the subscription item
+                      example: si_12345
+                    price:
+                      type: object
+                      description: Price details of the subscription item
+                      properties:
+                        id:
+                          type: string
+                          description: Unique identifier for the price
+    CheckoutSessionCompletedRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+          description: The ID of the user associated with the checkout session
+          example: userId-xxx
+        subscriptionId:
+          type: string
+          description: The ID of the subscription associated with the checkout session
+          example: subId-xxx
+        checkoutSessionId:
+          type: string
+          description: The unique identifier for the Stripe checkout session
+          example: checkoutSessionId-xxx
+  securitySchemes:
+    cognitoUserAuth:
+      type: oauth2
+      description: Cognito authorization code flow for users
+      flows:
+        implicit:
+          authorizationUrl: https://auth.app.blng.ai/oauth2/authorize
+          scopes:
+            email: email
+            profile: profile
+            openid: openid
+            aws.cognito.signin.user.admin: aws.cognito.signin.user.admin

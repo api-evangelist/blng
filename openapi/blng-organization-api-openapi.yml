@@ -1,0 +1,309 @@
+openapi: 3.2.0
+info:
+  title: User Organization API
+  description: Api to manage roles and permissions of users
+  version: 1.0.0
+servers:
+- url: https://users.blng.ai
+  description: Base URL declared by the provider in apis.yml (roadmap#122).
+tags:
+- name: Organization
+paths:
+  /organizations:
+    get:
+      tags:
+      - Organization
+      summary: get organizations
+      deprecated: true
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Organization'
+        '500':
+          description: Internal Server Error
+    post:
+      tags:
+      - Organization
+      summary: create organization
+      deprecated: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Name of the organization
+                stripeCustomerId:
+                  type: string
+                  description: Stripe customer ID for the organization
+              required:
+              - name
+              example:
+                name: BigCo Inc.
+                stripeCustomerId: cus_ABC123
+      responses:
+        '201':
+          description: Organization created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error
+  /organizations/{organizationId}:
+    get:
+      tags:
+      - Organization
+      summary: Get organization by ID
+      deprecated: true
+      parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for the organization
+      responses:
+        '200':
+          description: Organization found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          description: Bad Request
+        '404':
+          description: Organization not found
+        '500':
+          description: Internal Server Error
+    put:
+      tags:
+      - Organization
+      summary: Update organization
+      deprecated: true
+      parameters:
+      - name: organizationId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for the organization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Name of the organization
+                stripeCustomerId:
+                  type: string
+                  description: Stripe customer ID
+              example:
+                name: New Org Name
+                stripeCustomerId: cus_DEF456
+      responses:
+        '200':
+          description: Organization updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          description: Bad Request
+        '404':
+          description: Organization not found
+        '500':
+          description: Internal Server Error
+  /composite/createOrgAndSubscriptionWithUser:
+    post:
+      tags:
+      - Organization
+      summary: Creates an organization, a subscription, and a user, and attaches them in one transaction
+      deprecated: true
+      description: 'Creates a new organization , a new subscription , and attaches an existing user to the subscription with an admin role. This is **not strictly REST** because it handles multiple resources in one call, but it simplifies our client needs
+
+        '
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                organizationName:
+                  type: string
+                  description: Name of the organization
+                subscriptionName:
+                  type: string
+                  description: Subscription name to create or attach
+                userId:
+                  type: string
+                  description: Unique identifier for the User
+              required:
+              - organizationName
+              - subscriptionName
+              - userId
+              example:
+                organizationName: BigCo Inc.
+                subscriptionName: My Super Subscription
+                userId: abc123
+      responses:
+        '201':
+          description: Composite creation succeeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  organization:
+                    $ref: '#/components/schemas/Organization'
+                  subscription:
+                    $ref: '#/components/schemas/Subscription'
+                  userId:
+                    type: string
+                    description: Unique identifier for the User
+        '400':
+          description: Bad Request
+        '404':
+          description: User not found
+        '409':
+          description: Conflict (e.g., organization or subscription already exists in a conflicting state)
+        '500':
+          description: Internal Server Error
+components:
+  schemas:
+    Organization:
+      type: object
+      properties:
+        organizationId:
+          type: string
+          description: Unique identifier for the organization
+        name:
+          type: string
+          description: Name of the organization
+        stripeCustomerId:
+          type: string
+          description: Stripe customer ID
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the organization was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last update to organization
+    Entitlements:
+      type: object
+      properties:
+        maxJourneys:
+          type: integer
+          description: Maximum number of journeys allowed on a subscription. -1 for unlimited.
+        chatVisibilityWindowHrs:
+          type: integer
+          description: Maximum number of hours to let a user look back in chat history. -1 for unlimited.
+    Subscription:
+      type: object
+      properties:
+        subscriptionId:
+          type: string
+          description: Unique identifier for the subscription
+        name:
+          type: string
+          description: Human-friendly subscription name
+        ownerId:
+          type: string
+          description: id of owner of the subscription
+        ownerType:
+          type: string
+          enum:
+          - user
+          - organization
+          description: Type of owner of the subscription
+        subscriptionType:
+          type: string
+          enum:
+          - starter
+          - pro
+          - team
+          - enterprise
+          - beta
+          description: Type of subscription
+        stripeSubscriptionId:
+          type: string
+          description: Stripe subscription ID
+        stripeCustomerId:
+          type: string
+          description: Stripe customer ID associated with owner
+        seatsPurchased:
+          type: integer
+          description: Number of seats purchased
+        paymentSource:
+          type: string
+          enum:
+          - stripe
+          - apple
+          description: Payment source for subscription. Always stripe for now.
+        status:
+          type: string
+          enum:
+          - active
+          - canceled
+          - incomplete
+          - incomplete_expired
+          - paused
+          - past_due
+          - trialing
+          - unpaid
+          description: Status of subscription. Maps to stripe status.
+        cancelAtPeriodEnd:
+          type: boolean
+          description: Whether the subscription will be canceled at the end of the current period
+        currentPeriodEnd:
+          type: string
+          format: date-time
+          description: Timestamp of when the current period ends
+        canceledAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the subscription was canceled
+        entitlements:
+          $ref: '#/components/schemas/Entitlements'
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the subscription was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last update to subscription
+  securitySchemes:
+    cognitoUserAuth:
+      type: oauth2
+      description: Cognito authorization code flow for users
+      flows:
+        implicit:
+          authorizationUrl: https://auth.app.blng.ai/oauth2/authorize
+          scopes:
+            email: email
+            profile: profile
+            openid: openid
+            aws.cognito.signin.user.admin: aws.cognito.signin.user.admin
+    machineBearerToken:
+      type: http
+      description: 'Cognito authorization code flow for billing token, request token with command like `curl -X POST https://auth.app.blng.ai/oauth2/token -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=client_credentials&client_id=7arq76lejqmgq3qc556vr7rupn&client_secret=CLIENT_SECRET&scope=blng/billing"`
+
+        '
+      scheme: bearer
+      bearerFormat: JWT Access Token

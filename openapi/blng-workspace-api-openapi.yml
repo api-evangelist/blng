@@ -1,0 +1,1418 @@
+openapi: 3.2.0
+info:
+  title: User Workspace API
+  description: Api to manage roles and permissions of users
+  version: 1.0.0
+servers:
+- url: https://users.blng.ai
+  description: Base URL declared by the provider in apis.yml (roadmap#122).
+tags:
+- name: Workspace
+paths:
+  /users/{userId}/memberships:
+    get:
+      tags:
+      - Workspace
+      summary: List workspace memberships for user (multi-tenancy; returns [] when feature off)
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success (empty array when multi-tenancy is disabled for the stage)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkspaceMembership'
+        '500':
+          description: Internal Server Error
+  /users/{userId}/workspaces:
+    get:
+      tags:
+      - Workspace
+      summary: List workspaces for user (summaries for switcher; returns [] when feature off)
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success (empty array when multi-tenancy is disabled for the stage)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserWorkspaceSwitcherItem'
+        '500':
+          description: Internal Server Error
+    post:
+      tags:
+      - Workspace
+      summary: Create a team, enterprise, or enterprise-team workspace (creator becomes owner)
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkspaceRequest'
+      responses:
+        '201':
+          description: Workspace created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWorkspaceSwitcherItem'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Multi-tenancy disabled, deleted account, insufficient access to parent enterprise, or workspace creation limit reached (soft cap on memberships with role owner; configurable per stage and per user via `allowedWorkspaces` on the User record).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User or parent workspace not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+  /users/{userId}/workspaces/{workspaceId}:
+    get:
+      tags:
+      - Workspace
+      summary: Get a single workspace (for user) by workspaceId
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWorkspaceSwitcherItem'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Workspace not found for user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+    put:
+      tags:
+      - Workspace
+      summary: Update editable workspace fields (currently name only)
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWorkspaceRequest'
+      responses:
+        '200':
+          description: Workspace updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWorkspaceSwitcherItem'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Multi-tenancy disabled or insufficient role for update
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Workspace not found for user (or workspace row missing)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+  /users/{userId}/workspaces/{workspaceId}/members:
+    get:
+      tags:
+      - Workspace
+      summary: List members for a workspace visible to the requesting user (paginated)
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: limit
+        in: query
+        required: false
+        description: Page size (default 50, max 100)
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+      - name: nextToken
+        in: query
+        required: false
+        description: Opaque token from the previous response to fetch the next page
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Success (members empty when multi-tenancy is disabled for the stage). `email` and `displayName` use denormalized fields on membership when present to avoid per-page Users BatchGet; legacy rows without those fields are hydrated from Users for that page only.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMembersList'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Workspace not found for user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+  /users/{userId}/workspaces/{workspaceId}/invitations:
+    get:
+      tags:
+      - Workspace
+      summary: List pending workspace invitations (owner/admin)
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Pending invitations for the workspace
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkspacePendingInvitationAdmin'
+        '403':
+          description: Multi-tenancy disabled or insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Workspace not found for user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+    post:
+      tags:
+      - Workspace
+      summary: Invite a member by email (team, enterprise, enterprise-team only; owner/admin; SES when configured)
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkspaceInvitationRequest'
+      responses:
+        '201':
+          description: Invitation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceInvitationCreated'
+        '400':
+          description: Bad Request (e.g. invalid body or cannot invite your own email)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Multi-tenancy disabled, insufficient role, or workspace type does not support invitations (personal starter/pro/beta)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Workspace or authenticated user not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Pending invite exists or user already a member
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+  /users/{userId}/workspaces/{workspaceId}/invitations/{invitationId}:
+    delete:
+      tags:
+      - Workspace
+      summary: Revoke a pending workspace invitation (owner/admin)
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: invitationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Invitation revoked
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Multi-tenancy disabled or insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Workspace or invitation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Invitation is not pending
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+  /users/{userId}/workspaces/{workspaceId}/invitations/{invitationId}/resend:
+    post:
+      tags:
+      - Workspace
+      summary: Resend workspace invite email (team/ent workspaces only; owner/admin; SES)
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: invitationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Resend attempted
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - emailSent
+                properties:
+                  emailSent:
+                    type: boolean
+                    description: Whether SES accepted the send (false if misconfigured or SES failure)
+        '400':
+          description: Bad Request (e.g. invitation not pending, expired, or DESIGN_APP_WEB_ORIGIN missing)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Multi-tenancy disabled, insufficient role, or workspace type does not support invitations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Workspace or invitation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many resend attempts for this invitation (cooldown between successful invitation emails)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+  /users/{userId}/workspace-invitations/inbox:
+    get:
+      tags:
+      - Workspace
+      summary: List pending workspace invitations for the signed-in user's email (accept from settings without opening the email link)
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Pending invitations the user can accept (non-expired, workspace still valid, not already a member)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required:
+                  - workspaceInvitationId
+                  - workspaceId
+                  - workspaceName
+                  - role
+                  - createdAt
+                  properties:
+                    workspaceInvitationId:
+                      type: string
+                      format: uuid
+                    workspaceId:
+                      type: string
+                      format: uuid
+                    workspaceName:
+                      type: string
+                    role:
+                      type: string
+                    createdAt:
+                      type: string
+                    expiresAt:
+                      type: integer
+                      description: Unix epoch seconds when the invite link expires
+        '403':
+          description: Multi-tenancy disabled or account not active
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+  /users/{userId}/workspace-invitations/{invitationId}/email-match:
+    get:
+      tags:
+      - Workspace
+      summary: Check whether the signed-in user's email matches a pending workspace invitation; when true, returns workspace display name (public GET does not expose the name)
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: invitationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Match result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - matches
+                properties:
+                  matches:
+                    type: boolean
+                  workspaceName:
+                    type: string
+                    description: Present only when matches is true; workspace display name for the invite UI
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Path userId does not match authenticated user or multi-tenancy disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User, invitation not found, or invitation not pending
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+  /users/{userId}/workspace-invitations/{invitationId}/accept:
+    post:
+      tags:
+      - Workspace
+      summary: Accept a workspace invitation (authenticated; email must match; target must be team/ent workspace)
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: invitationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '201':
+          description: Membership created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMembership'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Email mismatch, multi-tenancy disabled, orphaned account, or target workspace does not support members (personal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Invitation or user not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Invitation not pending, expired, already a member, invalid role, or transactional conflict (e.g. accepted concurrently in another session)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: DynamoDB throughput limit; client should retry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+  /workspace-invitations/{invitationId}:
+    get:
+      tags:
+      - Workspace
+      summary: Public invitation metadata for the invite landing page (no auth; workspace name omitted)
+      parameters:
+      - name: invitationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Invitation details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceInvitationPublic'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Multi-tenancy is not enabled for this deployment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Invitation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+  /users/{userId}/workspaces/{workspaceId}/members/{memberUserId}:
+    put:
+      tags:
+      - Workspace
+      summary: Update a member role (owner/admin; owner-only rules for OWNER role)
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: memberUserId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMembershipRoleRequest'
+      responses:
+        '200':
+          description: Membership updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceMembership'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Multi-tenancy disabled or insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Workspace or member not found for user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Would remove the last workspace owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+    delete:
+      tags:
+      - Workspace
+      summary: Remove a workspace member (owner/admin; owner-only removal of owners)
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: memberUserId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Member removed
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Multi-tenancy disabled or insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Workspace or member not found for user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Cannot remove the last workspace owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+  /users/{userId}/workspaces/{workspaceId}/integrity:
+    get:
+      tags:
+      - Workspace
+      summary: Workspace integrity summary (owner/admin; reporting only)
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Integrity report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceIntegrityReport'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Multi-tenancy disabled or insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Workspace not found for user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+  /users/{userId}/workspaces/{workspaceId}/sso-config:
+    put:
+      tags:
+      - Workspace
+      summary: Rotate the workspace's enterprise SAML config (owner/admin; self-service)
+      description: Updates the SAML IdP metadata (and optionally the email attribute mapping) for the provider the caller's workspace federates through. The provider is resolved only from the caller's own membership, never the request body.
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - metadataXml
+              properties:
+                metadataXml:
+                  type: string
+                  description: Inline SAML IdP metadata document (EntityDescriptor XML), not a URL.
+                emailAttribute:
+                  type: string
+                  description: Optional SAML assertion attribute carrying email; omitted keeps the current mapping.
+      responses:
+        '200':
+          description: SSO configuration updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  providerName:
+                    type: string
+                  updated:
+                    type: boolean
+        '400':
+          description: Invalid body, no provider for workspace, or metadata rejected by Cognito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Multi-tenancy disabled or insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Workspace or enterprise SSO provider not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+  /users/{userId}/active-workspace:
+    put:
+      tags:
+      - Workspace
+      summary: Set active workspace (403 when multi-tenancy disabled for stage)
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetActiveWorkspaceRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Multi-tenancy not enabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found, or no membership for the requested workspace
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    WorkspacePendingInvitationAdmin:
+      type: object
+      required:
+      - workspaceInvitationId
+      - workspaceId
+      - email
+      - role
+      - status
+      - inviteTarget
+      - createdAt
+      - updatedAt
+      properties:
+        workspaceInvitationId:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+        email:
+          type: string
+        role:
+          type: string
+        status:
+          type: string
+          enum:
+          - PENDING
+          - ACCEPTED
+          - REJECTED
+        inviteTarget:
+          type: string
+          enum:
+          - new_user
+          - existing_user
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+    WorkspaceMembersList:
+      type: object
+      required:
+      - members
+      description: Paginated list from GET .../workspaces/{workspaceId}/members
+      properties:
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceMembership'
+        nextToken:
+          type: string
+          description: Present when more pages exist; pass as the nextToken query parameter
+    CreateWorkspaceRequest:
+      type: object
+      required:
+      - name
+      - type
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          description: Display name for the new workspace
+        type:
+          type: string
+          enum:
+          - team
+          - enterprise
+          - enterprise-team
+        parentWorkspaceId:
+          type: string
+          format: uuid
+          description: Required when type is enterprise-team; must be an enterprise workspace the user administers
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+    UpdateWorkspaceRequest:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          description: Workspace display name
+    WorkspaceMembership:
+      type: object
+      description: Membership row (PK userId, SK workspaceId). Returned by GET /users/{userId}/memberships.
+      required:
+      - userId
+      - workspaceId
+      - role
+      - createdAt
+      - updatedAt
+      properties:
+        userId:
+          type: string
+        workspaceId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum:
+          - OWNER
+          - BILLING_ADMIN
+          - ADMIN
+          - EDITOR
+          - VIEWER
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        memberType:
+          type: string
+          enum:
+          - sso_employee
+          - external
+          - federated_b2b2c
+          description: Optional; SSO / external / federated classification
+        federatedIdpId:
+          type: string
+          description: Optional; IdP identifier when memberType is federated_b2b2c
+        email:
+          type: string
+          description: Optional; from Users table when returned by GET .../workspaces/{workspaceId}/members
+        displayName:
+          type: string
+          description: Optional; derived from user first/last name when available
+    WorkspaceIntegrityReport:
+      type: object
+      required:
+      - workspaceId
+      - workspaceRowExists
+      - memberCount
+      - ownerCount
+      properties:
+        workspaceId:
+          type: string
+          format: uuid
+        workspaceRowExists:
+          type: boolean
+          description: Whether a workspace row exists for this id (false may indicate orphaned memberships)
+        memberCount:
+          type: integer
+          minimum: 0
+        ownerCount:
+          type: integer
+          minimum: 0
+        subscriptionIdOnWorkspace:
+          type: string
+          description: Present when the workspace row exists and has subscriptionId set
+    UserWorkspaceSwitcherItem:
+      type: object
+      description: Per-membership workspace summary for the UI switcher. Returned by GET /users/{userId}/workspaces. Hydrated fields (name, type, etc.) may be omitted if the workspace row is missing.
+      required:
+      - workspaceId
+      - role
+      properties:
+        workspaceId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum:
+          - OWNER
+          - BILLING_ADMIN
+          - ADMIN
+          - EDITOR
+          - VIEWER
+        memberType:
+          type: string
+          enum:
+          - sso_employee
+          - external
+          - federated_b2b2c
+        federatedIdpId:
+          type: string
+        name:
+          type: string
+          description: Workspace display name when the workspace record was found
+        type:
+          type: string
+          enum:
+          - starter
+          - pro
+          - team
+          - enterprise
+          - beta
+          - enterprise-team
+        subscriptionId:
+          type: string
+          format: uuid
+        subscriptionType:
+          type: string
+          description: Billing tier of the workspace's subscription, so the client can reflect the active workspace's plan.
+          enum:
+          - starter
+          - pro
+          - team
+          - enterprise
+          - beta
+        status:
+          type: string
+          description: Status of the workspace's subscription. Maps to stripe status.
+          enum:
+          - active
+          - canceled
+          - incomplete
+          - incomplete_expired
+          - paused
+          - past_due
+          - trialing
+          - unpaid
+        parentWorkspaceId:
+          type: string
+          format: uuid
+    WorkspaceInvitationCreated:
+      type: object
+      required:
+      - workspaceInvitationId
+      - workspaceId
+      - email
+      - inviteTarget
+      - role
+      - status
+      - createdAt
+      properties:
+        workspaceInvitationId:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+        email:
+          type: string
+        inviteTarget:
+          type: string
+          enum:
+          - new_user
+          - existing_user
+        role:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        emailSent:
+          type: boolean
+          description: Whether the invite email was sent via SES (false if EMAIL_API/origin missing or send failed)
+        inviteUrl:
+          type: string
+          format: uri
+          description: Canonical accept link (DESIGN_APP_WEB_ORIGIN + /workspace-invite/{id}); present when origin is configured so clients need not use window.location
+    WorkspaceInvitationPublic:
+      type: object
+      required:
+      - workspaceInvitationId
+      - workspaceId
+      - emailMasked
+      - inviteTarget
+      - status
+      - role
+      properties:
+        workspaceInvitationId:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+        emailMasked:
+          type: string
+          description: Redacted invitee email for display; use GET .../email-match when authenticated to verify the signed-in account
+        inviteTarget:
+          type: string
+          enum:
+          - new_user
+          - existing_user
+        status:
+          type: string
+          enum:
+          - PENDING
+          - ACCEPTED
+          - REJECTED
+        role:
+          type: string
+    CreateWorkspaceInvitationRequest:
+      type: object
+      required:
+      - email
+      - role
+      properties:
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum:
+          - OWNER
+          - BILLING_ADMIN
+          - ADMIN
+          - EDITOR
+          - VIEWER
+    User:
+      type: object
+      properties:
+        userId:
+          type: string
+          description: Unique identifier for the user
+        email:
+          type: string
+          description: Email of the user
+        firstName:
+          type: string
+          description: First name of the user
+        lastName:
+          type: string
+          description: Last name of the user
+        companyName:
+          type: string
+          description: Optional company name (app metadata, not auth)
+        profilePictureUrl:
+          type: string
+          description: Profile image URL (e.g. from federated IdP), synced on login
+        stripeCustomerId:
+          type: string
+          description: Stripe customer ID
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the user was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last update to user
+        welcomeEmailSent:
+          type: boolean
+          description: Whether the welcome email has been sent
+          deprecated: true
+        welcomeEmailStatus:
+          type: string
+          enum:
+          - SENT
+          - NOT_SENT
+          - IN_PROGRESS
+          description: Status of the welcome email
+        tooltipFlowIdsViewed:
+          type: array
+          items:
+            type: string
+          description: Id of all tooltip flows marked as viewed
+        activeWorkspaceId:
+          type: string
+          format: uuid
+          description: Current workspace context (multi-tenancy); set via PUT /users/{userId}/active-workspace
+        allowedWorkspaces:
+          type: integer
+          minimum: 1
+          description: 'Ops-only override (DynamoDB): max workspaces this user may own via POST /users/{userId}/workspaces. Omitted on normal users; overrides the stage default (typically 3). Not settable via public PUT /users.'
+        marketingConsent:
+          $ref: '#/components/schemas/MarketingConsentReceipt'
+        marketingConsentPromptedAt:
+          type: string
+          format: date-time
+          description: Set when the one-time consent prompt was shown and closed without an answer. Suppresses further prompting without recording a choice the user never made. Mutually exclusive with marketingConsent. Set via PUT /users/{userId}/marketing-consent.
+        signUpPending:
+          type: boolean
+          enum:
+          - true
+          description: Present only while an account is still going through sign-up and has not resolved the marketing consent ask. Written by account creation, cleared by the first consent write, and absent on every row created before it was introduced. Not settable via any API.
+    UpdateMembershipRoleRequest:
+      type: object
+      required:
+      - role
+      properties:
+        role:
+          type: string
+          enum:
+          - OWNER
+          - BILLING_ADMIN
+          - ADMIN
+          - EDITOR
+          - VIEWER
+    MarketingConsentReceipt:
+      type: object
+      description: Marketing opt-in receipt (GDPR consent provenance). Present only for users who made an explicit choice; optIn records that choice either way. Synced to HubSpot as the marketing_opt_in contact property. Absent for users who have never been asked or who dismissed the prompt.
+      required:
+      - optIn
+      - timestamp
+      - wordingVersion
+      - captureLocation
+      properties:
+        optIn:
+          type: boolean
+          description: The user's choice
+        timestamp:
+          type: string
+          format: date-time
+          description: When the choice was captured. Server-stamped; never accepted from the caller.
+        wordingVersion:
+          type: string
+          description: Version tag of the exact consent wording shown, so the receipt survives copy changes
+        captureLocation:
+          type: string
+          description: Which surface captured the choice. `email-unsubscribe` and `email-spam-complaint` are withdrawals the recipient made against mail we sent, the first through an unsubscribe link and the second by reporting it to their provider. Both are recorded from the CRM's own subscription-change events rather than through this API.
+          enum:
+          - signup
+          - first-login-prompt
+          - settings
+          - email-unsubscribe
+          - email-spam-complaint
+    SetActiveWorkspaceRequest:
+      type: object
+      required:
+      - activeWorkspaceId
+      properties:
+        activeWorkspaceId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: Workspace to activate for the user; null clears active workspace.
+  securitySchemes:
+    cognitoUserAuth:
+      type: oauth2
+      description: Cognito authorization code flow for users
+      flows:
+        implicit:
+          authorizationUrl: https://auth.app.blng.ai/oauth2/authorize
+          scopes:
+            email: email
+            profile: profile
+            openid: openid
+            aws.cognito.signin.user.admin: aws.cognito.signin.user.admin
+    machineBearerToken:
+      type: http
+      description: 'Cognito authorization code flow for billing token, request token with command like `curl -X POST https://auth.app.blng.ai/oauth2/token -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=client_credentials&client_id=7arq76lejqmgq3qc556vr7rupn&client_secret=CLIENT_SECRET&scope=blng/billing"`
+
+        '
+      scheme: bearer
+      bearerFormat: JWT Access Token

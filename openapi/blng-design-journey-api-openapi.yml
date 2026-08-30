@@ -1,0 +1,1405 @@
+openapi: 3.2.0
+info:
+  title: Design Journey API
+  description: API to manage user journeys in shopping or design domains, including interactions like image uploads and prompt management.
+  version: 2.0.0
+servers:
+- url: /v2
+tags:
+- name: Design Journey
+paths:
+  /design/assets:
+    get:
+      summary: List assets for the authenticated user (newest first)
+      operationId: listAssetsForUser
+      tags:
+      - Design Journey
+      parameters:
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          default: 10
+          maximum: 100
+      - name: nextPageKey
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Assets
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Asset'
+                  nextPageKey:
+                    type: string
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /design/assets/upload:
+    post:
+      summary: Create an upload slot and return a pre-signed URL
+      operationId: createAssetUploadUrl
+      tags:
+      - Design Journey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - type
+              - contentType
+              properties:
+                type:
+                  type: string
+                  description: Asset category
+                  enum:
+                  - image
+                  - model
+                  - stamps
+                contentType:
+                  type: string
+                  description: 'MIME type that must be sent in the upload; baked into the presign. Externalized CRDT stamp blobs (type=stamps) use application/octet-stream.
+
+                    '
+                format:
+                  type: string
+                  description: Optional hint (e.g., glb, usdz, png). Server will infer/validate.
+                id:
+                  type: string
+                  description: Optional asset ID to use for the new asset placeholder. If not provided, the server will generate one
+      responses:
+        '201':
+          description: Upload URL and asset id
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    description: Pre-signed URL for uploading the asset
+                  id:
+                    type: string
+                    description: ID of the new asset placeholder
+        '400':
+          description: Invalid input (unsupported type/contentType/format or mismatch)
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /design/assets/{assetId}:
+    get:
+      summary: Get asset metadata
+      operationId: getAsset
+      tags:
+      - Design Journey
+      parameters:
+      - name: assetId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Asset metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+        '404':
+          description: Asset not found
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /design/assets/{assetId}/download:
+    get:
+      summary: Get a signed URL for downloading an asset
+      operationId: getAssetDownloadUrl
+      tags:
+      - Design Journey
+      parameters:
+      - name: assetId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: variant
+        in: query
+        required: false
+        description: 'Which object to sign. Omit for the asset itself; use `thumbnail` to sign the video''s thumbnail/preview still (only valid when the asset has a thumbnail).
+
+          '
+        schema:
+          type: string
+          enum:
+          - thumbnail
+      responses:
+        '200':
+          description: Time-limited download URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    description: Pre-signed URL for downloading the asset
+        '404':
+          description: Asset not found
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /design/journeys/{journeyId}/images/upload:
+    post:
+      deprecated: true
+      summary: Generate an image and get a pre-signed URL for upload
+      operationId: generateImageUploadURL
+      tags:
+      - Design Journey
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  description: The MIME type of the file to be uploaded.
+                  enum:
+                  - image/jpeg
+                  - image/jpg
+                  - image/png
+                  - image/gif
+                  example: image/jpeg
+                id:
+                  type: string
+                  description: Optional image ID to use for the new image placeholder. If not provided, the server will generate one
+      responses:
+        '201':
+          description: Pre-signed URL for image upload and image ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    description: Pre-signed URL for uploading the image.
+                  imageId:
+                    type: string
+                    description: Unique identifier for the newly created image placeholder.
+        '400':
+          description: Invalid content type provided
+        '404':
+          description: Journey not found
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /design/journeys/{journeyId}/images:
+    get:
+      deprecated: true
+      summary: Retrieve all images for a journey
+      operationId: getAllImagesForJourney
+      tags:
+      - Design Journey
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: List of images associated with the journey
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Image'
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /design/journeys/{journeyId}/images/{imageId}:
+    get:
+      deprecated: true
+      summary: Retrieve metadata for a specified image
+      operationId: getImageMetadata
+      tags:
+      - Design Journey
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: imageId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Image metadata retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Image'
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+    delete:
+      deprecated: true
+      summary: Remove a specific image from the journey
+      operationId: deleteImage
+      tags:
+      - Design Journey
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: imageId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Image successfully deleted
+        '404':
+          description: Image not found
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /design/journeys/{journeyId}/images/{imageId}/download:
+    get:
+      deprecated: true
+      summary: Generate a pre-signed URL for downloading an image
+      operationId: generateImageDownloadUrl
+      tags:
+      - Design Journey
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: imageId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Pre-signed URL generated for image download
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    description: Pre-signed URL for downloading the image.
+        '404':
+          description: Image not found
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /design/journeys/{journeyId}/models:
+    get:
+      summary: List models for a journey (newest first)
+      operationId: listModelsForJourney
+      tags:
+      - Design Journey
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          default: 10
+          maximum: 100
+      - name: nextPageKey
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Models
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Model3D'
+                  nextPageKey:
+                    type: string
+        '404':
+          description: Journey not found
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+    post:
+      summary: Create a Model3D from an uploaded 3D asset
+      operationId: createModel3D
+      tags:
+      - Design Journey
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateModel3DRequest'
+      responses:
+        '201':
+          description: Model3D created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Model3D'
+        '400':
+          description: Invalid input data
+        '404':
+          description: Journey not found
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /design/journeys/{journeyId}/models/{modelId}:
+    get:
+      summary: Get a Model3D (slots and status)
+      operationId: getModel3D
+      tags:
+      - Design Journey
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: modelId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Model
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Model3D'
+        '404':
+          description: Journey or model not found
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /design/journeys/{journeyId}/models/{modelId}/conversions:
+    post:
+      summary: Re-submit conversions for any incomplete slots
+      operationId: resubmitModelConversions
+      tags:
+      - Design Journey
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: modelId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitModelConversionsRequest'
+      responses:
+        '202':
+          description: Conversions (re)submitted where applicable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Model3D'
+        '404':
+          description: Journey or model not found
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /design/journeys/{journeyId}/generations:
+    post:
+      summary: Start a model generation from a prompt image
+      operationId: startModelGeneration
+      tags:
+      - Design Journey
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelGenerationRequest'
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelGeneration'
+        '400':
+          description: Invalid input data
+        '401':
+          description: Unauthorized
+        '404':
+          description: Journey or prompt not found
+        '422':
+          description: imageAssetId is not one of this prompt's generatedImageIds (asset IDs), or invalid layer image request
+        '423':
+          description: Another operation is in progress for this journey
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: chatPrompt operation in progress
+                  operationInFlight:
+                    type: string
+                    enum:
+                    - chatPrompt
+                    - modelGeneration
+                  operationOwnerId:
+                    type: string
+                  operationExpiresAt:
+                    type: string
+                    format: date-time
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+    get:
+      summary: Get model generations for a journey (newest first)
+      operationId: listModelGenerations
+      tags:
+      - Design Journey
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: active
+        in: query
+        description: If true, only return generations that are currently in progress (generating status)
+        schema:
+          type: boolean
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          default: 10
+          maximum: 100
+      - name: nextPageKey
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Generations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ModelGeneration'
+                  nextPageKey:
+                    type: string
+                  totalCount:
+                    type: number
+                    description: Total number of ModelGenerations, may not be accurate
+        '404':
+          description: Journey or prompt not found
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /design/journeys/{journeyId}/generations/{generationId}:
+    get:
+      summary: Get a model generation for a prompt (request, state, response)
+      operationId: getModelGeneration
+      tags:
+      - Design Journey
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: generationId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Model generation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelGeneration'
+        '404':
+          description: Journey, prompt, or generation not found
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /design/journeys/{journeyId}/plans/{planId}:
+    get:
+      summary: Get a design plan for a journey
+      operationId: getDesignPlanForJourney
+      tags:
+      - Design Journey
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: planId
+        in: path
+        required: true
+        schema:
+          type: string
+      - in: header
+        name: If-None-Match
+        description: 'If provided, the server returns `304 Not Modified` when the
+
+          plan''s current `ETag` matches this value. Use the `ETag`
+
+          returned from a prior GET response as the value here for
+
+          cheap revalidation — plan bodies change frequently while a
+
+          plan is executing and stabilize once `status === complete`.
+
+          '
+        required: false
+        schema:
+          type: string
+          example: W/"f4e3d2c1b0a90817"
+      responses:
+        '200':
+          description: Design plan
+          headers:
+            ETag:
+              description: 'Weak entity tag computed from a truncated SHA-256 hash
+
+                of the serialized plan response. Bumps on every status
+
+                flip, stage update, generated-image addition, or analysis
+
+                edit. Send this value back as `If-None-Match` on
+
+                subsequent GETs.
+
+                '
+              schema:
+                type: string
+                example: W/"f4e3d2c1b0a90817"
+            Cache-Control:
+              description: 'Always `private, no-cache, must-revalidate`. Clients may
+
+                cache the body but MUST revalidate with the origin via
+
+                `If-None-Match` before reuse; per-user, so not cacheable
+
+                by shared intermediaries.
+
+                '
+              schema:
+                type: string
+                example: private, no-cache, must-revalidate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DesignPlanItem'
+        '304':
+          description: 'Returned when the request''s `If-None-Match` header matches
+
+            the current ETag. Body is empty; clients should reuse their
+
+            cached representation.
+
+            '
+          headers:
+            ETag:
+              description: Current ETag value, identical to the request's `If-None-Match`.
+              schema:
+                type: string
+                example: W/"f4e3d2c1b0a90817"
+            Cache-Control:
+              description: Always `private, no-cache, must-revalidate`.
+              schema:
+                type: string
+                example: private, no-cache, must-revalidate
+        '404':
+          description: Journey or plan not found
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /design/journeys/{journeyId}/plans:
+    get:
+      summary: List design plans for a journey (newest first)
+      operationId: listDesignPlansForJourney
+      tags:
+      - Design Journey
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: userId
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: pageSize
+        in: query
+        schema:
+          type: integer
+          default: 10
+          maximum: 100
+      - name: nextPageKey
+        in: query
+        schema:
+          type: string
+      - in: header
+        name: If-None-Match
+        description: 'If provided, the server returns `304 Not Modified` when the
+
+          response body''s current `ETag` matches this value. Bulk-plans
+
+          responses bump their etag whenever any plan in the page
+
+          changes (status flip, stage update, etc.) or when a new plan
+
+          is appended.
+
+          '
+        required: false
+        schema:
+          type: string
+          example: W/"0123456789abcdef"
+      responses:
+        '200':
+          description: Design plans
+          headers:
+            ETag:
+              description: 'Weak entity tag computed from a truncated SHA-256 hash
+
+                of the serialized response body. Different pagination
+
+                cursors produce different etags.
+
+                '
+              schema:
+                type: string
+                example: W/"0123456789abcdef"
+            Cache-Control:
+              description: 'Always `private, no-cache, must-revalidate`. Clients may
+
+                cache the body but MUST revalidate with the origin via
+
+                `If-None-Match` before reuse; per-user, so not cacheable
+
+                by shared intermediaries.
+
+                '
+              schema:
+                type: string
+                example: private, no-cache, must-revalidate
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DesignPlanItem'
+                  nextPageKey:
+                    type: string
+        '304':
+          description: 'Returned when the request''s `If-None-Match` header matches
+
+            the current ETag. Body is empty; clients should reuse their
+
+            cached representation.
+
+            '
+          headers:
+            ETag:
+              description: Current ETag value, identical to the request's `If-None-Match`.
+              schema:
+                type: string
+                example: W/"0123456789abcdef"
+            Cache-Control:
+              description: Always `private, no-cache, must-revalidate`.
+              schema:
+                type: string
+                example: private, no-cache, must-revalidate
+        '404':
+          description: Journey not found
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /design/journeys/{journeyId}/image-ops:
+    post:
+      summary: Submit an image operation (upscale, background removal, etc.)
+      description: 'Accepts a request to perform an image operation on a layer or prompt asset. The request is validated and forwarded to a FIFO SQS queue for asynchronous processing by Design Exec. Returns 202 Accepted immediately.
+
+        '
+      tags:
+      - Design Journey
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Unique identifier for the journey.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageOpsRequest'
+      responses:
+        '202':
+          description: Image operation accepted for processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageOpsAcceptedResponse'
+        '400':
+          description: Invalid request (bad schema, unsupported Layer bucket, or Prompt asset validation failure)
+        '401':
+          description: Unauthorized
+        '404':
+          description: Journey not found
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+components:
+  schemas:
+    ImageOpsLayerRequest:
+      allOf:
+      - $ref: '#/components/schemas/ImageOpsRequestBase'
+      - type: object
+        required:
+        - source
+        - layerId
+        properties:
+          source:
+            type: string
+            enum:
+            - Layer
+          layerId:
+            type: string
+            minLength: 1
+          promptId:
+            type:
+            - string
+            - 'null'
+          planId:
+            type:
+            - string
+            - 'null'
+    SubmitModelConversionsRequest:
+      type: object
+      properties:
+        force:
+          type: boolean
+          default: false
+          description: If true, enqueue even if a slot is succeeded.
+    ModelGenerationResponse:
+      oneOf:
+      - $ref: '#/components/schemas/ModelGenerationSuccessResponse'
+      - $ref: '#/components/schemas/ModelGenerationErrorResponse'
+      description: Terminal payload for a model generation (success or error)
+    ImageLocation:
+      type: object
+      required:
+      - s3Bucket
+      - s3Key
+      properties:
+        s3Bucket:
+          type: string
+        s3Key:
+          type: string
+    DesignPlanItem:
+      type: object
+      required:
+      - planId
+      - journeyId
+      - promptId
+      - status
+      - planThoughtReasoning
+      - planProposal
+      - planDeclaration
+      - stages
+      properties:
+        planId:
+          type: string
+        journeyId:
+          type: string
+        promptId:
+          type: string
+        status:
+          type: string
+          enum:
+          - draft
+          - review
+          - complete
+          - failed
+        planThoughtReasoning:
+          type: array
+          description: The thought process and reasoning behind the design plan.
+          items:
+            type: string
+        planProposal:
+          type: string
+        planDeclaration:
+          type: string
+        stages:
+          type: array
+          items:
+            $ref: '#/components/schemas/DesignPlanStage'
+    Asset:
+      type: object
+      required:
+      - id
+      - type
+      - contentType
+      - format
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the asset
+        userId:
+          type: string
+          description: Unique identifier for the user who owns the asset
+        journeyId:
+          type: string
+          description: Optional journey association for the asset
+        type:
+          type: string
+          enum:
+          - image
+          - model
+          - stamps
+          - video
+        contentType:
+          type: string
+          description: MIME type stored on the object (e.g., image/png, model/gltf-binary, application/octet-stream)
+        format:
+          type: string
+          description: Normalized format (lowercase, no dot), e.g., png, jpg, gif, glb, usdz
+        description:
+          type: string
+          description: Short human-readable name/description of the asset content (e.g., "Gold ring with diamond solitaire"), provided by generation pipelines.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          description: Opaque, client-safe fields (server populated)
+          properties:
+            size:
+              type: integer
+              description: Size in bytes
+            hasThumbnail:
+              type: boolean
+              description: 'True when a thumbnail/preview still exists for this asset (video assets). Fetch it via GET /design/assets/{assetId}/download?variant=thumbnail.
+
+                '
+    CreateModel3DRequest:
+      type: object
+      required:
+      - sourceAssetId
+      properties:
+        sourceAssetId:
+          type: string
+          description: 'ID of an uploaded Asset (type=model) that seeds this Model. If format ∈ {usd, usdz, glb}, that slot is immediately marked succeeded. Other formats (e.g., obj, stl, ply, gltf) are retained as source-only attachments. On create, the server automatically enqueues conversions for any missing slots.
+
+            '
+    DesignPlanStage:
+      type: object
+      required:
+      - stageId
+      - status
+      - generatedImages
+      - executionUpdate
+      - resultAnalysis
+      properties:
+        stageId:
+          type: string
+        generatedImages:
+          type: array
+          items:
+            $ref: '#/components/schemas/DesignPlanGeneratedImages'
+        executionUpdate:
+          type: string
+        resultAnalysis:
+          type: string
+        status:
+          type: string
+          enum:
+          - draft
+          - review
+          - complete
+          - failed
+    ImageOpsRequest:
+      oneOf:
+      - $ref: '#/components/schemas/ImageOpsLayerRequest'
+      - $ref: '#/components/schemas/ImageOpsPromptRequest'
+      - $ref: '#/components/schemas/ImageOpsLegacyRequest'
+      discriminator:
+        propertyName: source
+        mapping:
+          Layer: '#/components/schemas/ImageOpsLayerRequest'
+          Prompt: '#/components/schemas/ImageOpsPromptRequest'
+          Legacy: '#/components/schemas/ImageOpsLegacyRequest'
+    Model3D:
+      type: object
+      description: Three-slot 3D model with conversion status per slot.
+      required:
+      - id
+      - journeyId
+      - createdAt
+      - updatedAt
+      - slots
+      - sourceAssetId
+      - status
+      properties:
+        id:
+          type: string
+        journeyId:
+          type: string
+        sourceAssetId:
+          type: string
+          description: Original uploaded/generated asset that seeded this model.
+        slots:
+          type: object
+          required:
+          - usd
+          - usdz
+          - glb
+          properties:
+            usd:
+              $ref: '#/components/schemas/Model3DSlot'
+            usdz:
+              $ref: '#/components/schemas/Model3DSlot'
+            glb:
+              $ref: '#/components/schemas/Model3DSlot'
+        status:
+          type: string
+          enum:
+          - submitted
+          - failed
+          - succeeded
+          description: 'Aggregated readiness derived from slots:
+
+            - submitted: at least one slot submitted and none failed
+
+            - failed: all terminal and at least one failed
+
+            - succeeded: all terminal and all succeeded
+
+            '
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ModelGenerationErrorResponse:
+      type: object
+      required:
+      - ok
+      - generationId
+      - imageAssetId
+      - error
+      properties:
+        ok:
+          type: boolean
+          enum:
+          - false
+        generationId:
+          type: string
+        imageAssetId:
+          type: string
+        error:
+          type: string
+          description: Error message describing the failure reason.
+    ImageOpsLegacyRequest:
+      allOf:
+      - $ref: '#/components/schemas/ImageOpsRequestBase'
+      - type: object
+        required:
+        - source
+        - promptId
+        - sourceAssetId
+        properties:
+          source:
+            type: string
+            enum:
+            - Legacy
+          promptId:
+            type: string
+            minLength: 1
+            description: 'design-v2 prompt. sourceAssetId must be one entry from response.generatedImageIds (required when the prompt has multiple generated images).
+
+              '
+          workflow:
+            type: string
+            enum:
+            - Upscale
+            - RemoveBackground
+          sourceAssetId:
+            type: string
+            minLength: 1
+            description: 'Asset id of the specific generated image to transform. When generatedImageIds has multiple entries, this must be the id of the image the user selected.
+
+              '
+          imageLocation:
+            description: Must be null or omitted; pixels are resolved from sourceAssetId only.
+          layerId:
+            type:
+            - string
+            - 'null'
+          planId:
+            type:
+            - string
+            - 'null'
+          stageId:
+            type:
+            - string
+            - 'null'
+        description: 'design-v2 chat prompt image ops (upscale / remove background). RegenerateImage is not supported. Completion is published as prompt.legacy.* on the event bus.
+
+          '
+    Model3DSlot:
+      type: object
+      required:
+      - status
+      properties:
+        status:
+          type: string
+          enum:
+          - submitted
+          - succeeded
+          - failed
+          - expired
+          description: Current status of the slot.
+        assetId:
+          type: string
+          description: Asset ID for the slot when status=succeeded.
+        lastError:
+          type: string
+          description: Most recent terminal error (when status=failed).
+        expiresAt:
+          type: string
+          format: date-time
+          description: When the slot will be automatically marked expired if not succeeded.
+    ImageOpsPromptRequest:
+      allOf:
+      - $ref: '#/components/schemas/ImageOpsRequestBase'
+      - type: object
+        required:
+        - source
+        - promptId
+        - planId
+        properties:
+          source:
+            type: string
+            enum:
+            - Prompt
+          promptId:
+            type: string
+            minLength: 1
+          planId:
+            type: string
+            minLength: 1
+          layerId:
+            type:
+            - string
+            - 'null'
+          stageId:
+            type: string
+            minLength: 1
+            description: 'Plan stage id for Prompt-source retries (e.g. regenerate after a failed image in stage review). Included in FIFO deduplication when present.
+
+              '
+    Image:
+      deprecated: true
+      description: This schema is deprecated and will be removed in the future. Please use the Asset schema instead.
+      type: object
+      required:
+      - imageId
+      - journeyId
+      - contentType
+      properties:
+        imageId:
+          type: string
+          description: Unique identifier for the image.
+        journeyId:
+          type: string
+          description: Identifier of the journey this image is associated with.
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the image was created.
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last update to the image.
+        metadata:
+          type: object
+          properties:
+            format:
+              type: string
+              description: Image format (e.g., JPEG, PNG).
+            size:
+              type: integer
+              description: Image size in bytes.
+    ImageOpsRequestBase:
+      type: object
+      description: Common fields for POST /design/journeys/{journeyId}/image-ops (see `ImageOpsRequest` oneOf).
+      required:
+      - workflow
+      - journeyId
+      properties:
+        workflow:
+          $ref: '#/components/schemas/ImageOpsApiWorkflow'
+        journeyId:
+          type: string
+          description: Must match the journeyId path parameter.
+        sourceAssetId:
+          type: string
+          description: 'Source image asset id. Required for Upscale, RemoveBackground, and Layer source. Optional for Prompt RegenerateImage when `stageId` is set (stage retry with no asset yet). Provide `imageLocation` instead when bypassing the asset table.
+
+            '
+        destinationAssetId:
+          type: string
+          format: uuid
+          description: 'Optional correlation id for async results. If omitted, the server assigns a UUID and returns it on the 202 Accepted body.
+
+            '
+        expirationTime:
+          type: string
+          format: date-time
+          description: Optional client expiry; server clamps to at most ~300s from receipt.
+        imageLocation:
+          $ref: '#/components/schemas/ImageLocation'
+          description: Optional override; otherwise resolved from sourceAssetId server-side.
+        generationId:
+          type: string
+    ModelGenerationRequest:
+      description: 'Request payload for generating a model from an image. Model generations first create a GLB, then the system automatically enqueues conversions to USD and USDZ.
+
+        Use `imageSource: "layer"` when `imageAssetId` is a journey canvas image that is not necessarily listed on the prompt''s generated outputs (still requires `promptId` on the same journey for routing).
+
+        '
+      type: object
+      required:
+      - imageAssetId
+      properties:
+        promptId:
+          type: string
+          description: ID of the prompt that generated the image asset (optional for standalone generations)
+        imageAssetId:
+          type: string
+          description: ID of the image asset to be used in the model generation
+        imageSource:
+          type: string
+          enum:
+          - prompt
+          - layer
+          default: prompt
+          description: '`prompt` (default): `imageAssetId` must be one of this prompt''s generated image asset IDs.
+
+            `layer`: `imageAssetId` may be any image asset on the journey (e.g. canvas layer composite); ownership and journey checks still apply.
+
+            '
+        expirationTime:
+          type: string
+          format: date-time
+          description: Timestamp when the model generation request expires
+          readOnly: true
+    ImageOpsApiWorkflow:
+      type: string
+      enum:
+      - Upscale
+      - RemoveBackground
+      - RegenerateImage
+    DesignPlanGeneratedImages:
+      type: object
+      required:
+      - assetId
+      properties:
+        assetId:
+          type: string
+    ModelGeneration:
+      description: End-to-end pipeline - generation (GLB) → slot conversions (USD, USDZ) → ready
+      type: object
+      required:
+      - generationId
+      - journeyId
+      - status
+      - request
+      - createdAt
+      - updatedAt
+      properties:
+        id:
+          type: string
+        journeyId:
+          type: string
+        promptId:
+          type: string
+        status:
+          type: string
+          enum:
+          - submitted
+          - generating
+          - converting
+          - succeeded
+          - failedGeneration
+          - failedConversion
+          - expired
+        modelId:
+          type: string
+          description: ID of the created Model3D (available from 'converting' onward).
+        glbAssetId:
+          type: string
+          description: Asset ID of the GLB slot produced by generation (available from 'converting' onward).
+        request:
+          $ref: '#/components/schemas/ModelGenerationRequest'
+        response:
+          $ref: '#/components/schemas/ModelGenerationResponse'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ModelGenerationSuccessResponse:
+      type: object
+      required:
+      - ok
+      - generationId
+      - imageAssetId
+      - modelId
+      - glbAssetId
+      properties:
+        ok:
+          type: boolean
+          enum:
+          - true
+        generationId:
+          type: string
+        imageAssetId:
+          type: string
+        modelId:
+          type: string
+          description: The Model3D created from the generation output.
+        glbAssetId:
+          type: string
+          description: The GLB asset produced by the generation step.
+    ImageOpsAcceptedResponse:
+      type: object
+      properties:
+        journeyId:
+          type: string
+        workflow:
+          $ref: '#/components/schemas/ImageOpsApiWorkflow'
+        source:
+          type: string
+          enum:
+          - Layer
+          - Prompt
+          - Legacy
+        layerId:
+          type: string
+        promptId:
+          type: string
+        planId:
+          type: string
+        sourceAssetId:
+          type: string
+        destinationAssetId:
+          type: string
+          format: uuid
+          description: Correlation id for async result handlers (matches submission).
+        expirationTime:
+          type: string
+          format: date-time
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "Use your Cognito \"access_token\" or \"id_token\" obtained from AWS Cognito Hosted UI \nor CLI. Click \"Authorize\" and paste the token.\n"
+    cognitoUserAuth:
+      type: oauth2
+      description: Cognito authorization code flow for users
+      flows:
+        implicit:
+          authorizationUrl: https://auth.app.blng.ai/oauth2/authorize
+          scopes:
+            email: email
+            profile: profile
+            openid: openid
+            aws.cognito.signin.user.admin: aws.cognito.signin.user.admin

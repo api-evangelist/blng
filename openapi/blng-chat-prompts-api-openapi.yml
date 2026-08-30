@@ -1,0 +1,333 @@
+openapi: 3.2.0
+info:
+  title: Journey Chat Prompts API
+  description: API to manage user journeys in shopping or design domains, including interactions like image uploads and prompt management.
+  version: 2.0.0
+servers:
+- url: /v2
+tags:
+- name: Chat Prompts
+paths:
+  /design/journeys/{journeyId}/chat-prompt:
+    post:
+      summary: Submit a chat prompt request (design-v2)
+      operationId: submitChatPrompt
+      tags:
+      - Chat Prompts
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatPromptRequest'
+      responses:
+        '200':
+          description: Chat prompt successfully processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatPrompt'
+        '400':
+          description: Invalid input data
+        '429':
+          description: Too many requests, the user has exceeded their concurrency limit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: CONCURRENCY_LIMIT_EXCEEDED
+                  message:
+                    type: string
+                    example: User has exceeded their concurrency limit for chat prompts
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /design/journeys/{journeyId}/chat-prompt-v3:
+    post:
+      summary: Submit a chat prompt request (design-v3)
+      operationId: submitChatPromptV3
+      tags:
+      - Chat Prompts
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatPromptRequestV3'
+      responses:
+        '200':
+          description: Chat prompt successfully processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatPrompt'
+        '400':
+          description: Invalid input data
+        '429':
+          description: Too many requests, the user has exceeded their concurrency limit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: CONCURRENCY_LIMIT_EXCEEDED
+                  message:
+                    type: string
+                    example: User has exceeded their concurrency limit for chat prompts
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+components:
+  schemas:
+    ImageDimensions:
+      type: object
+      properties:
+        width:
+          type: number
+        height:
+          type: number
+    ImageGenPromptDetails:
+      type: object
+      properties:
+        canvasImageId:
+          type: string
+        isColorImage:
+          type: boolean
+        influence:
+          type: number
+          format: float
+        lassoMask:
+          $ref: '#/components/schemas/LassoMask'
+    ChatPrompt:
+      type: object
+      properties:
+        promptId:
+          type: string
+          description: Unique identifier for the chat prompt.
+        journeyId:
+          type: string
+          description: Identifier of the journey this chat prompt is associated with.
+        request:
+          $ref: '#/components/schemas/ChatPromptRequest'
+        response:
+          $ref: '#/components/schemas/ChatPromptResponse'
+      required:
+      - promptId
+      - journeyId
+      - request
+      - response
+    ChatPromptResponse:
+      allOf:
+      - $ref: '#/components/schemas/PromptResponse'
+      - type: object
+        properties:
+          status:
+            type: string
+            enum:
+            - succeeded
+            - failed
+            - expired
+          botMessage:
+            type: string
+            description: The AI-generated response to the chat message.
+          generatedImageIds:
+            type: array
+            description: List of asset IDs for images generated as part of the prompt result.
+            items:
+              type: string
+    LassoMask:
+      type: object
+      description: Details about a lasso mask selection.
+      properties:
+        lassoMaskId:
+          type: string
+        auxiliarySketchId:
+          type: string
+      required:
+      - lassoMaskId
+    ChatPromptRequestV3:
+      allOf:
+      - $ref: '#/components/schemas/PromptRequest'
+      - type: object
+        properties:
+          userMessage:
+            type: string
+          expirationTime:
+            type: string
+            format: date-time
+          variantCount:
+            type: integer
+            default: 1
+          assetDetails:
+            $ref: '#/components/schemas/AssetDetails'
+          imageDims:
+            $ref: '#/components/schemas/ImageDimensions'
+          scene:
+            oneOf:
+            - $ref: '#/components/schemas/Color'
+            - preset: null
+              type: object
+              properties:
+                preset:
+                  type: string
+                  description: Name of the preset scene to use for generation (e.g., classic, arctic, aurora, noir, transparent)
+            - assetId: null
+              type: object
+              properties:
+                assetId:
+                  type: string
+                  description: The UUID of the image asset
+          mode:
+            type: string
+            enum:
+            - auto
+            - fast
+            - thinking
+            description: The mode of image generation (e.g., 'auto', 'fast', 'thinking').
+        required:
+        - scene
+        - expirationTime
+        - assetDetails
+        - timestamp
+        - type
+        - mode
+        - userAgent
+        - userMessage
+        - variantCount
+    PromptRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the prompt request. The server will create this if not provided.
+        type:
+          type: string
+          description: The type of prompt (e.g., design, design-v2 etc.).
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the prompt was generated.
+        userAgent:
+          type: string
+          description: User agent string of the client that generated the prompt.
+      required:
+      - type
+    Color:
+      type: object
+      properties:
+        red:
+          type: integer
+          description: Red component of the color (0-255)
+        green:
+          type: integer
+          description: Green component of the color (0-255)
+        blue:
+          type: integer
+          description: Blue component of the color (0-255)
+        alpha:
+          type: number
+          format: float
+          description: Alpha component of the color (0.0-1.0)
+    AssetReference:
+      type: object
+      properties:
+        assetId:
+          type: string
+        type:
+          type: string
+          description: Type of the asset reference.
+          enum:
+          - canvas
+          - asset
+        influence:
+          type: number
+          minimum: 0
+          maximum: 1
+        intent:
+          type: array
+          description: Per-image guidance from the reference context menu — aspect chips (e.g. texture, color) and/or free text describing how this image should influence the generation. Passed through to the design pipeline verbatim; sanitized there.
+          items:
+            type: string
+    AssetDetails:
+      type: object
+      properties:
+        lassoMaskId:
+          type: string
+        isColorAsset:
+          type: boolean
+        references:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetReference'
+    PromptResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the response was generated.
+        type:
+          type: string
+          description: The type of prompt (e.g., design, design-v2 etc.).
+    ChatPromptRequest:
+      allOf:
+      - $ref: '#/components/schemas/PromptRequest'
+      - type: object
+        properties:
+          userMessage:
+            type: string
+          type:
+            type: string
+            enum:
+            - design-v2
+          expirationTime:
+            type: string
+            format: date-time
+          usePremiumMode:
+            type: boolean
+            default: true
+          artisticStyle:
+            type: string
+            default: classic
+          variantCount:
+            type: integer
+            default: 1
+          imageDetails:
+            $ref: '#/components/schemas/ImageGenPromptDetails'
+        required:
+        - userMessage
+        - type
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "Use your Cognito \"access_token\" or \"id_token\" obtained from AWS Cognito Hosted UI \nor CLI. Click \"Authorize\" and paste the token.\n"
+    cognitoUserAuth:
+      type: oauth2
+      description: Cognito authorization code flow for users
+      flows:
+        implicit:
+          authorizationUrl: https://auth.app.blng.ai/oauth2/authorize
+          scopes:
+            email: email
+            profile: profile
+            openid: openid
+            aws.cognito.signin.user.admin: aws.cognito.signin.user.admin

@@ -1,0 +1,725 @@
+openapi: 3.2.0
+info:
+  title: Journeys API
+  description: API to manage user journeys in shopping or design domains, including interactions like image uploads and prompt management.
+  version: 2.0.0
+servers:
+- url: /v2
+tags:
+- name: Journeys
+paths:
+  /journeys:
+    get:
+      summary: Retrieve journeys or search for journeys based on criteria
+      operationId: getJourneys
+      tags:
+      - Journeys
+      parameters:
+      - name: userId
+        in: query
+        required: true
+        schema:
+          type: string
+        description: Unique identifier for the user whose journeys are being retrieved.
+      - name: type
+        in: query
+        schema:
+          type: string
+          enum:
+          - design
+          - shopping
+        description: Filter by the type of the journey.
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 10
+          maximum: 100
+        description: The number of journeys to return in a single page (default 10)
+      - name: nextPageKey
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Token to retrieve the next set of journeys if paginating. Omit if retrieving the first page.
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+        description: 'Free-text search term to fuzzy-match against the specified journey fields.
+
+          If provided, this routes through OpenSearch; otherwise DynamoDB paging is used.
+
+          '
+      - name: fields
+        in: query
+        required: false
+        style: form
+        explode: false
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - specifics.name
+        description: '**Required** when `q` is present: comma-separated list of fields to fuzzy-search on.
+
+          Allowed values: [specifics.name].
+
+          '
+      - name: deleted
+        in: query
+        required: false
+        description: When "true", returns only soft-deleted journeys (the recycle-bin view) for the caller's workspace. Requires pageSize and cannot be combined with q. Defaults to false (deleted journeys are excluded). Because deleted journeys are filtered after the page limit is applied, a page may contain fewer than pageSize items (or none) while more remain; clients should keep paging until nextPageKey is absent.
+        schema:
+          type: boolean
+          default: false
+      responses:
+        '200':
+          description: A list of journeys, optionally filtered based on query parameters. Returns either a paginated response (when pageSize is provided) or an array of journeys (when pageSize is not provided).
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: object
+                  description: Paginated response when pageSize parameter is provided
+                  properties:
+                    items:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Journey'
+                    nextPageKey:
+                      type: string
+                      description: Token to retrieve the next page of journeys, or empty if no further pages
+                    totalCount:
+                      type: number
+                      description: Total number of journeys matching the query, counted across all DynamoDB pages (not just the first scan window). Returned on the first page only and omitted on subsequent pages (when a nextPageKey was supplied); clients should retain the first page's value while paging.
+                - type: array
+                  description: Array of journeys when pageSize parameter is not provided (for backward compatibility)
+                  items:
+                    $ref: '#/components/schemas/Journey'
+        '400':
+          description: Invalid request parameters
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+    post:
+      summary: Start a new journey
+      operationId: startNewJourney
+      tags:
+      - Journeys
+      requestBody:
+        description: Data needed to initiate a new journey
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - userId
+              - type
+              properties:
+                userId:
+                  type: string
+                  description: Unique identifier for the user
+                type:
+                  type: string
+                  description: Type of the journey (design or shopping)
+                  enum:
+                  - design
+                  - shopping
+                id:
+                  type: string
+                  description: Optional unique identifier for the journey. If not provided, the server will generate one
+      responses:
+        '201':
+          description: Journey successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Journey'
+        '400':
+          description: Invalid input data
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /journeys/versions:
+    get:
+      summary: Retrieve journeys by date since a specified timestamp
+      operationId: getJourneysByDate
+      tags:
+      - Journeys
+      parameters:
+      - name: userId
+        in: query
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for the user whose journeys are being retrieved.
+      - name: since
+        in: query
+        required: true
+        schema:
+          type: string
+          format: ISO 8601 date-time
+          description: The starting date to filter journeys from, example - 2025-10-21T13:00:00Z.
+      responses:
+        '200':
+          description: A list of journeys created or updated since the specified date.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Journey'
+        '400':
+          description: Invalid request parameters
+  /journeys/restore:
+    post:
+      summary: Restore multiple soft-deleted journeys in a single request
+      operationId: restoreJourneysBulk
+      tags:
+      - Journeys
+      requestBody:
+        description: List of journey IDs to restore (maximum 50 per request).
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - journeyIds
+              properties:
+                journeyIds:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items:
+                    type: string
+                  description: Unique identifiers for the journeys to restore. Between 1 and 50 per request.
+      responses:
+        '200':
+          description: Per-journey restore outcomes. Always returns 200 for a valid request; inspect each item's status for the outcome.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        journeyId:
+                          type: string
+                          description: Unique identifier for the journey.
+                        status:
+                          type: string
+                          enum:
+                          - restored
+                          - not_found
+                          - forbidden
+                          description: Outcome of the restore attempt for this journey.
+        '400':
+          description: Invalid request — journeyIds is missing, empty, contains a blank id, exceeds 50 entries, or the body is not valid JSON.
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /journeys/{journeyId}:
+    get:
+      summary: Retrieve a specific journey
+      operationId: getJourney
+      tags:
+      - Journeys
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for the journey
+      - in: header
+        name: If-None-Match
+        description: 'If provided, the server returns `304 Not Modified` when the resource''s
+
+          current `ETag` matches this value. Use the `ETag` returned from a prior
+
+          GET response as the value here for cheap revalidation.
+
+          '
+        required: false
+        schema:
+          type: string
+          example: W/"1714564800000-r3"
+      responses:
+        '200':
+          description: Journey record returned in full.
+          headers:
+            ETag:
+              description: 'Weak entity tag for the returned journey, formatted as
+
+                `W/"<updatedAt-millis>-r<revision>"` (or `W/"<updatedAt-millis>"`
+
+                for legacy rows without a `revision` counter). Send this value
+
+                back as `If-None-Match` on subsequent GETs for cheap
+
+                revalidation.
+
+                '
+              schema:
+                type: string
+                example: W/"1714564800000-r3"
+            Cache-Control:
+              description: 'Always `private, no-cache, must-revalidate`. Clients may cache
+
+                the body but MUST revalidate with the origin via
+
+                `If-None-Match` before reuse; per-user, so not cacheable by
+
+                shared intermediaries.
+
+                '
+              schema:
+                type: string
+                example: private, no-cache, must-revalidate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Journey'
+        '304':
+          description: 'Returned when the request''s `If-None-Match` header matches the
+
+            current ETag. Body is empty; clients should reuse their cached
+
+            representation.
+
+            '
+          headers:
+            ETag:
+              description: 'Current ETag value, identical to the request''s
+
+                `If-None-Match`.
+
+                '
+              schema:
+                type: string
+                example: W/"1714564800000-r3"
+            Cache-Control:
+              description: Always `private, no-cache, must-revalidate`.
+              schema:
+                type: string
+                example: private, no-cache, must-revalidate
+        '404':
+          description: Journey not found
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+    delete:
+      summary: Delete a specific journey
+      description: 'Soft-deletes (tombstones) a journey. Authorization follows the container-ownership model: within a shared workspace, deletion is governed by the caller''s workspace role (OWNER/ADMIN/EDITOR may delete any journey in the workspace, regardless of who created it; BILLING_ADMIN and VIEWER may not), never by creatorship. Journeys without a workspace context remain deletable only by their creator (legacy).'
+      operationId: deleteJourney
+      tags:
+      - Journeys
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for the journey to be deleted
+      responses:
+        '204':
+          description: Journey successfully deleted
+        '403':
+          description: Delete not permitted — the caller's workspace role does not allow deletion, the caller is no longer a member of the journey's workspace, or the role could not be verified.
+        '404':
+          description: Journey not found
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /journeys/{journeyId}/restore:
+    post:
+      summary: Restore a soft-deleted journey
+      operationId: restoreJourney
+      tags:
+      - Journeys
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for the journey to be restored
+      responses:
+        '200':
+          description: Journey successfully restored.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Journey'
+        '403':
+          description: Restore not permitted — the caller is not the workspace owner, or workspace ownership could not be verified (e.g. the journey has no workspace context).
+        '404':
+          description: Journey not found, or not currently deleted.
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /design/journeys/{journeyId}:
+    put:
+      summary: Update a specific journey
+      operationId: updateJourney
+      tags:
+      - Journeys
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for the journey to be updated
+      requestBody:
+        description: Data needed to update a journey
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Journey'
+      responses:
+        '200':
+          description: Journey successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Journey'
+        '204':
+          description: No updates were made to the journey
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Invalid input data
+        '404':
+          description: Journey not found
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+components:
+  schemas:
+    JourneySpecifics:
+      type: object
+      properties:
+        height:
+          type: number
+        historicImages:
+          type: array
+          deprecated: true
+          description: List of image IDs that were generated from prompts, this property is deprecated and will be removed in the future
+          items:
+            type: string
+        layers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Layer'
+        name:
+          type: string
+        preview:
+          type: string
+        lastGenerateImageId:
+          description: asset ID of the last generated image from a chat prompt, updated when a chat prompt result is processed
+          type: string
+        visibleCanvasImageId:
+          description: asset ID of what the current canvas looks like (also called flattened), updated by clients when saving a layer
+          type: string
+        sceneImageId:
+          description: asset ID of the image used as the scene style in the app
+          type: string
+        width:
+          type: number
+        backgroundColor:
+          $ref: '#/components/schemas/Color'
+        references:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetReference'
+    LegacyLayer:
+      type: object
+      deprecated: true
+      description: Pre-discriminator layer shape. Accepted verbatim for back-compat; no server-side coercion.
+      properties:
+        name:
+          type: string
+          description: Name of the layer.
+        image:
+          $ref: '#/components/schemas/LayerImage'
+        visible:
+          type: boolean
+        locked:
+          type: boolean
+        blendMode:
+          type: string
+          description: Blending mode for compositing this layer in 2D.
+          example: normal
+        opacity:
+          type: number
+        width:
+          type: number
+        height:
+          type: number
+        resolution:
+          type: number
+          description: Resolution multiplier (legacy).
+          deprecated: true
+        originScale:
+          type: string
+          enum:
+          - 1x
+          - 2x
+          - 3x
+          - upscale4x
+          - external
+          deprecated: true
+      required:
+      - name
+    LayerModel3D:
+      type: object
+      required:
+      - modelId
+      - transform
+      properties:
+        modelId:
+          type: string
+          description: References a Model3D entity in this journey.
+        resolvedAssetId:
+          type: string
+          readOnly: true
+          description: Server-populated convenience pointer to the concrete asset currently used for this client/platform.
+        transform:
+          $ref: '#/components/schemas/Transform3D'
+    LayerImage:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID of the layer's image asset
+        width:
+          type: number
+          description: Width of the image
+        height:
+          type: number
+          description: Height of the image
+        top:
+          type: number
+          description: Topmost Y coordinate of the image
+        left:
+          type: number
+          description: Leftmost X coordinate of the image
+    Journey:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the journey
+        userId:
+          type: string
+          description: Unique identifier for the user
+        type:
+          type: string
+          description: Type of the journey (design or shopping)
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the journey was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last update to the journey
+        images:
+          type: array
+          items:
+            type: string
+          description: List of image IDs associated with the journey, this property is deprecated and will no longer be returned to clients
+          deprecated: true
+        specifics:
+          $ref: '#/components/schemas/JourneySpecifics'
+    Layer:
+      oneOf:
+      - $ref: '#/components/schemas/ImageLayer'
+      - $ref: '#/components/schemas/ModelLayer'
+      - $ref: '#/components/schemas/LegacyLayer'
+      discriminator:
+        propertyName: layerType
+        mapping:
+          image: '#/components/schemas/ImageLayer'
+          model: '#/components/schemas/ModelLayer'
+    Color:
+      type: object
+      properties:
+        red:
+          type: integer
+          description: Red component of the color (0-255)
+        green:
+          type: integer
+          description: Green component of the color (0-255)
+        blue:
+          type: integer
+          description: Blue component of the color (0-255)
+        alpha:
+          type: number
+          format: float
+          description: Alpha component of the color (0.0-1.0)
+    Vector3:
+      type: object
+      properties:
+        x:
+          type: number
+        y:
+          type: number
+        z:
+          type: number
+      required:
+      - x
+      - y
+      - z
+    AssetReference:
+      type: object
+      properties:
+        assetId:
+          type: string
+        type:
+          type: string
+          description: Type of the asset reference.
+          enum:
+          - canvas
+          - asset
+        influence:
+          type: number
+          minimum: 0
+          maximum: 1
+        intent:
+          type: array
+          description: Per-image guidance from the reference context menu — aspect chips (e.g. texture, color) and/or free text describing how this image should influence the generation. Passed through to the design pipeline verbatim; sanitized there.
+          items:
+            type: string
+    ImageLayer:
+      type: object
+      required:
+      - layerType
+      - name
+      - visible
+      - locked
+      - opacity
+      - image
+      properties:
+        layerType:
+          type: string
+          enum:
+          - image
+          description: Discriminator indicating an image (2D) layer.
+        name:
+          type: string
+          description: Name of the layer
+        image:
+          $ref: '#/components/schemas/LayerImage'
+        visible:
+          type: boolean
+        locked:
+          type: boolean
+        blendMode:
+          type: string
+          description: Blending mode for compositing this layer in 2D.
+        opacity:
+          type: number
+        width:
+          type: number
+        height:
+          type: number
+        originScale:
+          type: string
+          enum:
+          - 1x
+          - 2x
+          - 3x
+          - upscale4x
+          - external
+          description: Deprecated legacy field preserved for compatibility.
+          deprecated: true
+    ModelLayer:
+      type: object
+      required:
+      - layerType
+      - name
+      - visible
+      - locked
+      - opacity
+      - model
+      properties:
+        layerType:
+          type: string
+          enum:
+          - model
+          description: Discriminator indicating a 3D model layer.
+        name:
+          type: string
+        blendMode:
+          type: string
+        model:
+          $ref: '#/components/schemas/LayerModel3D'
+        visible:
+          type: boolean
+        locked:
+          type: boolean
+        opacity:
+          type: number
+    Quaternion:
+      type: object
+      properties:
+        x:
+          type: number
+        y:
+          type: number
+        z:
+          type: number
+        w:
+          type: number
+      required:
+      - x
+      - y
+      - z
+      - w
+    Transform3D:
+      type: object
+      properties:
+        position:
+          $ref: '#/components/schemas/Vector3'
+        orientation:
+          $ref: '#/components/schemas/Quaternion'
+        scale:
+          $ref: '#/components/schemas/Vector3'
+      required:
+      - position
+      - rotationDegrees
+      - scale
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "Use your Cognito \"access_token\" or \"id_token\" obtained from AWS Cognito Hosted UI \nor CLI. Click \"Authorize\" and paste the token.\n"
+    cognitoUserAuth:
+      type: oauth2
+      description: Cognito authorization code flow for users
+      flows:
+        implicit:
+          authorizationUrl: https://auth.app.blng.ai/oauth2/authorize
+          scopes:
+            email: email
+            profile: profile
+            openid: openid
+            aws.cognito.signin.user.admin: aws.cognito.signin.user.admin

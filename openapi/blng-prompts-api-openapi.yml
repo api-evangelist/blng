@@ -1,0 +1,345 @@
+openapi: 3.2.0
+info:
+  title: Journey Prompts API
+  description: API to manage user journeys in shopping or design domains, including interactions like image uploads and prompt management.
+  version: 2.0.0
+servers:
+- url: /v2
+tags:
+- name: Prompts
+paths:
+  /journeys/{journeyId}/prompts:
+    get:
+      summary: Retrieve paginated prompts for a specific journey, sorted from newest to oldest.
+      operationId: getPromptsForJourney
+      tags:
+      - Prompts
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for the journey
+      - name: pageSize
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 10
+          maximum: 100
+        description: The number of prompts to return in a single page (default 10)
+      - name: nextPageKey
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Token to retrieve the next set of prompts if paginating. Null if no more pages.
+      - name: includeLegacyPrompts
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+        description: Include legacy prompts in the response. They are sorted oldest to newest.
+      - in: header
+        name: If-None-Match
+        description: 'If provided, the server returns `304 Not Modified` when the
+
+          response body''s current `ETag` matches this value. Use the
+
+          `ETag` returned from a prior GET response as the value here
+
+          for cheap revalidation. For paginated responses, send the
+
+          etag returned for page 1 (no `nextPageKey`) — newer prompts
+
+          and status changes always reflow page 1, so a page-1 304 is
+
+          a sound proxy for "the whole prompts list is unchanged".
+
+          '
+        required: false
+        schema:
+          type: string
+          example: W/"a1b2c3d4e5f60718"
+      responses:
+        '200':
+          description: A paginated list of prompts
+          headers:
+            ETag:
+              description: 'Weak entity tag computed from a truncated SHA-256 hash
+
+                of the serialized response body. Send this value back
+
+                as `If-None-Match` on subsequent GETs for cheap
+
+                revalidation. Different pagination cursors produce
+
+                different etags.
+
+                '
+              schema:
+                type: string
+                example: W/"a1b2c3d4e5f60718"
+            Cache-Control:
+              description: 'Always `private, no-cache, must-revalidate`. Clients may
+
+                cache the body but MUST revalidate with the origin via
+
+                `If-None-Match` before reuse; per-user, so not cacheable
+
+                by shared intermediaries.
+
+                '
+              schema:
+                type: string
+                example: private, no-cache, must-revalidate
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  prompts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Prompt'
+                  legacyPrompts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Prompt'
+                  nextPageKey:
+                    type: string
+                    description: Token to retrieve the next page of prompts, or empty if no further pages
+        '304':
+          description: 'Returned when the request''s `If-None-Match` header matches
+
+            the current ETag. Body is empty; clients should reuse their
+
+            cached representation.
+
+            '
+          headers:
+            ETag:
+              description: Current ETag value, identical to the request's `If-None-Match`.
+              schema:
+                type: string
+                example: W/"a1b2c3d4e5f60718"
+            Cache-Control:
+              description: Always `private, no-cache, must-revalidate`.
+              schema:
+                type: string
+                example: private, no-cache, must-revalidate
+        '400':
+          description: Invalid request parameters
+        '404':
+          description: Journey or prompts not found
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /journeys/{journeyId}/prompts/{promptId}:
+    get:
+      summary: Retrieve a single prompt by its unique identifier
+      operationId: getPromptById
+      tags:
+      - Prompts
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for the journey
+      - name: promptId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Unique identifier for the prompt
+      - name: includeLegacyPrompts
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+        description: If true, includes legacy prompt details from the journey in the response
+      responses:
+        '200':
+          description: Details of the requested prompt
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  prompt:
+                    $ref: '#/components/schemas/Prompt'
+        '400':
+          description: Invalid request parameters
+        '404':
+          description: Prompt not found
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /journeys/{journeyId}/prompts/{promptId}/cancel-processing:
+    post:
+      summary: Cancel design-v3 prompt processing before a plan exists
+      description: 'Marks the prompt as pipeline-cancelled and completed so the user can submit a new prompt.
+
+        Once `response.planId` exists, use `POST .../plans/{planId}/cancel` instead.
+
+        '
+      operationId: cancelPromptProcessingBeforePlan
+      tags:
+      - Prompts
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: promptId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Updated prompt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Prompt'
+        '400':
+          description: Invalid request (e.g. not design-v3)
+        '404':
+          description: Journey or prompt not found
+        '409':
+          description: Conflict — plan already exists or prompt already terminal
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+  /journeys/{journeyId}/prompts/{promptId}/plans/{planId}/cancel:
+    post:
+      summary: Cancel a design plan for a prompt in a journey
+      operationId: cancelDesignPlanForPromptInJourney
+      tags:
+      - Prompts
+      parameters:
+      - name: journeyId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: promptId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: planId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Design plans
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: null
+        '422':
+          description: Validation Error
+      security:
+      - bearerAuth: []
+      - cognitoUserAuth: []
+components:
+  schemas:
+    PromptResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the response was generated.
+        type:
+          type: string
+          description: The type of prompt (e.g., design, design-v2 etc.).
+    Prompt:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the prompt.
+        journeyId:
+          type: string
+          description: Identifier of the journey this prompt is associated with.
+        userId:
+          type: string
+          description: Unique identifier for the user who created the prompt.
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the prompt was created.
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last update to the prompt.
+        request:
+          $ref: '#/components/schemas/PromptRequest'
+        response:
+          $ref: '#/components/schemas/PromptResponse'
+        scrambled:
+          type: boolean
+          description: Indicates if the prompt is scrambled because of entitlements.
+        activeAt:
+          type: number
+          description: Unix timestamp in seconds for when the prompt is active (used for concurrency limits).
+        expiresAt:
+          type: number
+          description: Unix timestamp in seconds for when the prompt will expire.
+        processingState:
+          type: string
+          enum:
+          - active
+          - cancelled
+          description: Pipeline control for design-v3 before a plan id exists; omitted on legacy prompts
+      required:
+      - id
+      - journeyId
+      - request
+    PromptRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the prompt request. The server will create this if not provided.
+        type:
+          type: string
+          description: The type of prompt (e.g., design, design-v2 etc.).
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the prompt was generated.
+        userAgent:
+          type: string
+          description: User agent string of the client that generated the prompt.
+      required:
+      - type
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "Use your Cognito \"access_token\" or \"id_token\" obtained from AWS Cognito Hosted UI \nor CLI. Click \"Authorize\" and paste the token.\n"
+    cognitoUserAuth:
+      type: oauth2
+      description: Cognito authorization code flow for users
+      flows:
+        implicit:
+          authorizationUrl: https://auth.app.blng.ai/oauth2/authorize
+          scopes:
+            email: email
+            profile: profile
+            openid: openid
+            aws.cognito.signin.user.admin: aws.cognito.signin.user.admin

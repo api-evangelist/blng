@@ -57,7 +57,7 @@ tags:
 - Retail
 - 3D Models
 - Image-Generation
-- Workspaces
+- Workspace
 - Billing
 - OpenAPI
 - AWS Cognito
@@ -87,7 +87,7 @@ apis:
   humanURL: https://users.blng.ai/
   baseURL: https://users.blng.ai
   tags:
-  - Workspaces
+  - Workspace
   - User
   - Organization
   - Subscription

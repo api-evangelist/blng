@@ -3,9 +3,6 @@ info:
   title: User Composite API
   description: Api to manage roles and permissions of users
   version: 1.0.0
-servers:
-- url: https://users.blng.ai
-  description: Base URL declared by the provider in apis.yml (roadmap#122).
 tags:
 - name: Composite
 paths:
@@ -13,11 +10,9 @@ paths:
     post:
       tags:
       - Composite
-      summary: Creates an organization, a subscription, and a user, and attaches them in one transaction
+      summary: Creates an organization, a subscription, and a user, and attaches them in one…
       deprecated: true
-      description: 'Creates a new organization , a new subscription , and attaches an existing user to the subscription with an admin role. This is **not strictly REST** because it handles multiple resources in one call, but it simplifies our client needs
-
-        '
+      description: Creates a new organization , a new subscription , and attaches an existing user to the subscription with an admin role. This is **not strictly REST** because it handles multiple resources in one call, but it simplifies our client needs
       requestBody:
         required: true
         content:
@@ -65,15 +60,15 @@ paths:
           description: Conflict (e.g., organization or subscription already exists in a conflicting state)
         '500':
           description: Internal Server Error
+      operationId: postCompositeCreateOrgAndSubscriptionWithUser
+      x-operation-id-source: derived
   /composite/createUserAndSubscription:
     post:
       tags:
       - Composite
-      summary: Creates a user, a subscription, and attaches them in one transaction. Subscription type is starter.
+      summary: Creates a user, a subscription, and attaches them in one transaction.
       deprecated: true
-      description: 'Creates a new user (if not exists) and a new subscription (if not exists), and attaches the user to the subscription with the specified roles. This is **not strictly REST** because it handles multiple resources in one call, but it simplifies our client needs
-
-        '
+      description: Creates a new user (if not exists) and a new subscription (if not exists), and attaches the user to the subscription with the specified roles. This is **not strictly REST** because it handles multiple resources in one call, but it simplifies our client needs
       requestBody:
         required: true
         content:
@@ -128,37 +123,10 @@ paths:
           description: Conflict (e.g., user or subscription already exists in a conflicting state)
         '500':
           description: Internal Server Error
+      operationId: postCompositeCreateUserAndSubscription
+      x-operation-id-source: derived
 components:
   schemas:
-    Organization:
-      type: object
-      properties:
-        organizationId:
-          type: string
-          description: Unique identifier for the organization
-        name:
-          type: string
-          description: Name of the organization
-        stripeCustomerId:
-          type: string
-          description: Stripe customer ID
-        createdAt:
-          type: string
-          format: date-time
-          description: Timestamp of when the organization was created
-        updatedAt:
-          type: string
-          format: date-time
-          description: Timestamp of the last update to organization
-    Entitlements:
-      type: object
-      properties:
-        maxJourneys:
-          type: integer
-          description: Maximum number of journeys allowed on a subscription. -1 for unlimited.
-        chatVisibilityWindowHrs:
-          type: integer
-          description: Maximum number of hours to let a user look back in chat history. -1 for unlimited.
     User:
       type: object
       properties:
@@ -329,6 +297,35 @@ components:
           - settings
           - email-unsubscribe
           - email-spam-complaint
+    Entitlements:
+      type: object
+      properties:
+        maxJourneys:
+          type: integer
+          description: Maximum number of journeys allowed on a subscription. -1 for unlimited.
+        chatVisibilityWindowHrs:
+          type: integer
+          description: Maximum number of hours to let a user look back in chat history. -1 for unlimited.
+    Organization:
+      type: object
+      properties:
+        organizationId:
+          type: string
+          description: Unique identifier for the organization
+        name:
+          type: string
+          description: Name of the organization
+        stripeCustomerId:
+          type: string
+          description: Stripe customer ID
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the organization was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last update to organization
   securitySchemes:
     cognitoUserAuth:
       type: oauth2

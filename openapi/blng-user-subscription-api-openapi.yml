@@ -3,9 +3,6 @@ info:
   title: User Subscription API
   description: Api to manage roles and permissions of users
   version: 1.0.0
-servers:
-- url: https://users.blng.ai
-  description: Base URL declared by the provider in apis.yml (roadmap#122).
 tags:
 - name: User Subscription
 paths:
@@ -39,6 +36,8 @@ paths:
           description: User not found
         '500':
           description: Internal Server Error
+      operationId: getUsersByUserIdSubscriptions
+      x-operation-id-source: derived
     post:
       tags:
       - User Subscription
@@ -82,6 +81,8 @@ paths:
           description: Conflict (e.g. subscription already linked)
         '500':
           description: Internal Server Error
+      operationId: postUsersByUserIdSubscriptions
+      x-operation-id-source: derived
   /users/{userId}/subscriptions/{subscriptionId}:
     get:
       tags:
@@ -116,6 +117,8 @@ paths:
           description: Not found
         '500':
           description: Internal Server Error
+      operationId: getUsersByUserIdSubscriptionsBySubscriptionId
+      x-operation-id-source: derived
     put:
       tags:
       - User Subscription
@@ -161,6 +164,8 @@ paths:
           description: Conflict (e.g., invalid role update scenario)
         '500':
           description: Internal Server Error
+      operationId: putUsersByUserIdSubscriptionsBySubscriptionId
+      x-operation-id-source: derived
   /subscriptions/{subscriptionId}/users:
     get:
       tags:
@@ -191,57 +196,10 @@ paths:
           description: Subscription not found
         '500':
           description: Internal Server Error
+      operationId: getSubscriptionsBySubscriptionIdUsers
+      x-operation-id-source: derived
 components:
   schemas:
-    UserSubscriptionView:
-      allOf:
-      - $ref: '#/components/schemas/Subscription'
-      - type: object
-        properties:
-          roles:
-            type: array
-            description: User roles on this subscription (legacy model compatibility)
-            items:
-              type: string
-              enum:
-              - OWNER
-              - BILLING_ADMIN
-              - ADMIN
-              - EDITOR
-              - VIEWER
-          workspaceId:
-            type: string
-            format: uuid
-            description: Linked workspace id (workspace model compatibility)
-    Entitlements:
-      type: object
-      properties:
-        maxJourneys:
-          type: integer
-          description: Maximum number of journeys allowed on a subscription. -1 for unlimited.
-        chatVisibilityWindowHrs:
-          type: integer
-          description: Maximum number of hours to let a user look back in chat history. -1 for unlimited.
-    UserSubscriptionListItem:
-      allOf:
-      - $ref: '#/components/schemas/Subscription'
-      - type: object
-        properties:
-          roles:
-            type: array
-            description: User roles on this subscription (legacy model compatibility)
-            items:
-              type: string
-              enum:
-              - OWNER
-              - BILLING_ADMIN
-              - ADMIN
-              - EDITOR
-              - VIEWER
-          workspaceId:
-            type: string
-            format: uuid
-            description: Linked workspace id (workspace model compatibility)
     User:
       type: object
       properties:
@@ -412,6 +370,55 @@ components:
           - settings
           - email-unsubscribe
           - email-spam-complaint
+    Entitlements:
+      type: object
+      properties:
+        maxJourneys:
+          type: integer
+          description: Maximum number of journeys allowed on a subscription. -1 for unlimited.
+        chatVisibilityWindowHrs:
+          type: integer
+          description: Maximum number of hours to let a user look back in chat history. -1 for unlimited.
+    UserSubscriptionView:
+      allOf:
+      - $ref: '#/components/schemas/Subscription'
+      - type: object
+        properties:
+          roles:
+            type: array
+            description: User roles on this subscription (legacy model compatibility)
+            items:
+              type: string
+              enum:
+              - OWNER
+              - BILLING_ADMIN
+              - ADMIN
+              - EDITOR
+              - VIEWER
+          workspaceId:
+            type: string
+            format: uuid
+            description: Linked workspace id (workspace model compatibility)
+    UserSubscriptionListItem:
+      allOf:
+      - $ref: '#/components/schemas/Subscription'
+      - type: object
+        properties:
+          roles:
+            type: array
+            description: User roles on this subscription (legacy model compatibility)
+            items:
+              type: string
+              enum:
+              - OWNER
+              - BILLING_ADMIN
+              - ADMIN
+              - EDITOR
+              - VIEWER
+          workspaceId:
+            type: string
+            format: uuid
+            description: Linked workspace id (workspace model compatibility)
   securitySchemes:
     cognitoUserAuth:
       type: oauth2

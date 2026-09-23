@@ -103,65 +103,22 @@ components:
           type: number
         height:
           type: number
-    ImageGenPromptDetails:
+    Color:
       type: object
       properties:
-        canvasImageId:
-          type: string
-        isColorImage:
-          type: boolean
-        influence:
+        red:
+          type: integer
+          description: Red component of the color (0-255)
+        green:
+          type: integer
+          description: Green component of the color (0-255)
+        blue:
+          type: integer
+          description: Blue component of the color (0-255)
+        alpha:
           type: number
           format: float
-        lassoMask:
-          $ref: '#/components/schemas/LassoMask'
-    ChatPrompt:
-      type: object
-      properties:
-        promptId:
-          type: string
-          description: Unique identifier for the chat prompt.
-        journeyId:
-          type: string
-          description: Identifier of the journey this chat prompt is associated with.
-        request:
-          $ref: '#/components/schemas/ChatPromptRequest'
-        response:
-          $ref: '#/components/schemas/ChatPromptResponse'
-      required:
-      - promptId
-      - journeyId
-      - request
-      - response
-    ChatPromptResponse:
-      allOf:
-      - $ref: '#/components/schemas/PromptResponse'
-      - type: object
-        properties:
-          status:
-            type: string
-            enum:
-            - succeeded
-            - failed
-            - expired
-          botMessage:
-            type: string
-            description: The AI-generated response to the chat message.
-          generatedImageIds:
-            type: array
-            description: List of asset IDs for images generated as part of the prompt result.
-            items:
-              type: string
-    LassoMask:
-      type: object
-      description: Details about a lasso mask selection.
-      properties:
-        lassoMaskId:
-          type: string
-        auxiliarySketchId:
-          type: string
-      required:
-      - lassoMaskId
+          description: Alpha component of the color (0.0-1.0)
     ChatPromptRequestV3:
       allOf:
       - $ref: '#/components/schemas/PromptRequest'
@@ -211,6 +168,24 @@ components:
         - userAgent
         - userMessage
         - variantCount
+    ChatPrompt:
+      type: object
+      properties:
+        promptId:
+          type: string
+          description: Unique identifier for the chat prompt.
+        journeyId:
+          type: string
+          description: Identifier of the journey this chat prompt is associated with.
+        request:
+          $ref: '#/components/schemas/ChatPromptRequest'
+        response:
+          $ref: '#/components/schemas/ChatPromptResponse'
+      required:
+      - promptId
+      - journeyId
+      - request
+      - response
     PromptRequest:
       type: object
       properties:
@@ -229,63 +204,28 @@ components:
           description: User agent string of the client that generated the prompt.
       required:
       - type
-    Color:
+    LassoMask:
       type: object
-      properties:
-        red:
-          type: integer
-          description: Red component of the color (0-255)
-        green:
-          type: integer
-          description: Green component of the color (0-255)
-        blue:
-          type: integer
-          description: Blue component of the color (0-255)
-        alpha:
-          type: number
-          format: float
-          description: Alpha component of the color (0.0-1.0)
-    AssetReference:
-      type: object
-      properties:
-        assetId:
-          type: string
-        type:
-          type: string
-          description: Type of the asset reference.
-          enum:
-          - canvas
-          - asset
-        influence:
-          type: number
-          minimum: 0
-          maximum: 1
-        intent:
-          type: array
-          description: Per-image guidance from the reference context menu — aspect chips (e.g. texture, color) and/or free text describing how this image should influence the generation. Passed through to the design pipeline verbatim; sanitized there.
-          items:
-            type: string
-    AssetDetails:
-      type: object
+      description: Details about a lasso mask selection.
       properties:
         lassoMaskId:
           type: string
-        isColorAsset:
-          type: boolean
-        references:
-          type: array
-          items:
-            $ref: '#/components/schemas/AssetReference'
-    PromptResponse:
+        auxiliarySketchId:
+          type: string
+      required:
+      - lassoMaskId
+    ImageGenPromptDetails:
       type: object
       properties:
-        timestamp:
+        canvasImageId:
           type: string
-          format: date-time
-          description: Timestamp when the response was generated.
-        type:
-          type: string
-          description: The type of prompt (e.g., design, design-v2 etc.).
+        isColorImage:
+          type: boolean
+        influence:
+          type: number
+          format: float
+        lassoMask:
+          $ref: '#/components/schemas/LassoMask'
     ChatPromptRequest:
       allOf:
       - $ref: '#/components/schemas/PromptRequest'
@@ -314,6 +254,66 @@ components:
         required:
         - userMessage
         - type
+    PromptResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the response was generated.
+        type:
+          type: string
+          description: The type of prompt (e.g., design, design-v2 etc.).
+    ChatPromptResponse:
+      allOf:
+      - $ref: '#/components/schemas/PromptResponse'
+      - type: object
+        properties:
+          status:
+            type: string
+            enum:
+            - succeeded
+            - failed
+            - expired
+          botMessage:
+            type: string
+            description: The AI-generated response to the chat message.
+          generatedImageIds:
+            type: array
+            description: List of asset IDs for images generated as part of the prompt result.
+            items:
+              type: string
+    AssetDetails:
+      type: object
+      properties:
+        lassoMaskId:
+          type: string
+        isColorAsset:
+          type: boolean
+        references:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetReference'
+    AssetReference:
+      type: object
+      properties:
+        assetId:
+          type: string
+        type:
+          type: string
+          description: Type of the asset reference.
+          enum:
+          - canvas
+          - asset
+        influence:
+          type: number
+          minimum: 0
+          maximum: 1
+        intent:
+          type: array
+          description: Per-image guidance from the reference context menu — aspect chips (e.g. texture, color) and/or free text describing how this image should influence the generation. Passed through to the design pipeline verbatim; sanitized there.
+          items:
+            type: string
   securitySchemes:
     bearerAuth:
       type: http

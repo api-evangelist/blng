@@ -3,9 +3,6 @@ info:
   title: User Workspace API
   description: Api to manage roles and permissions of users
   version: 1.0.0
-servers:
-- url: https://users.blng.ai
-  description: Base URL declared by the provider in apis.yml (roadmap#122).
 tags:
 - name: Workspace
 paths:
@@ -34,6 +31,8 @@ paths:
                   $ref: '#/components/schemas/WorkspaceMembership'
         '500':
           description: Internal Server Error
+      operationId: getUsersByUserIdMemberships
+      x-operation-id-source: derived
   /users/{userId}/workspaces:
     get:
       tags:
@@ -59,6 +58,8 @@ paths:
                   $ref: '#/components/schemas/UserWorkspaceSwitcherItem'
         '500':
           description: Internal Server Error
+      operationId: getUsersByUserIdWorkspaces
+      x-operation-id-source: derived
     post:
       tags:
       - Workspace
@@ -105,6 +106,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal Server Error
+      operationId: postUsersByUserIdWorkspaces
+      x-operation-id-source: derived
   /users/{userId}/workspaces/{workspaceId}:
     get:
       tags:
@@ -146,6 +149,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal Server Error
+      operationId: getUsersByUserIdWorkspacesByWorkspaceId
+      x-operation-id-source: derived
     put:
       tags:
       - Workspace
@@ -198,6 +203,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal Server Error
+      operationId: putUsersByUserIdWorkspacesByWorkspaceId
+      x-operation-id-source: derived
   /users/{userId}/workspaces/{workspaceId}/members:
     get:
       tags:
@@ -253,6 +260,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal Server Error
+      operationId: getUsersByUserIdWorkspacesByWorkspaceIdMembers
+      x-operation-id-source: derived
   /users/{userId}/workspaces/{workspaceId}/invitations:
     get:
       tags:
@@ -296,10 +305,12 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal Server Error
+      operationId: getUsersByUserIdWorkspacesByWorkspaceIdInvitations
+      x-operation-id-source: derived
     post:
       tags:
       - Workspace
-      summary: Invite a member by email (team, enterprise, enterprise-team only; owner/admin; SES when configured)
+      summary: Invite a member by email (team, enterprise, enterprise-team only; owner/admin…
       security:
       - cognitoUserAuth:
         - openid
@@ -354,6 +365,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal Server Error
+      operationId: postUsersByUserIdWorkspacesByWorkspaceIdInvitations
+      x-operation-id-source: derived
   /users/{userId}/workspaces/{workspaceId}/invitations/{invitationId}:
     delete:
       tags:
@@ -409,6 +422,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal Server Error
+      operationId: deleteUsersByUserIdWorkspacesByWorkspaceIdInvitationsByInvitationId
+      x-operation-id-source: derived
   /users/{userId}/workspaces/{workspaceId}/invitations/{invitationId}/resend:
     post:
       tags:
@@ -474,11 +489,13 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal Server Error
+      operationId: postUsersByUserIdWorkspacesByWorkspaceIdInvitationsByInvitationIdResend
+      x-operation-id-source: derived
   /users/{userId}/workspace-invitations/inbox:
     get:
       tags:
       - Workspace
-      summary: List pending workspace invitations for the signed-in user's email (accept from settings without opening the email link)
+      summary: List pending workspace invitations for the signed-in user's email (accept from…
       security:
       - cognitoUserAuth:
         - openid
@@ -533,11 +550,13 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal Server Error
+      operationId: getUsersByUserIdWorkspaceInvitationsInbox
+      x-operation-id-source: derived
   /users/{userId}/workspace-invitations/{invitationId}/email-match:
     get:
       tags:
       - Workspace
-      summary: Check whether the signed-in user's email matches a pending workspace invitation; when true, returns workspace display name (public GET does not expose the name)
+      summary: Check whether the signed-in user's email matches a pending workspace…
       security:
       - cognitoUserAuth:
         - openid
@@ -588,11 +607,13 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal Server Error
+      operationId: getUsersByUserIdWorkspaceInvitationsByInvitationIdEmailMatch
+      x-operation-id-source: derived
   /users/{userId}/workspace-invitations/{invitationId}/accept:
     post:
       tags:
       - Workspace
-      summary: Accept a workspace invitation (authenticated; email must match; target must be team/ent workspace)
+      summary: Accept a workspace invitation (authenticated; email must match; target must be…
       security:
       - cognitoUserAuth:
         - openid
@@ -647,11 +668,13 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal Server Error
+      operationId: postUsersByUserIdWorkspaceInvitationsByInvitationIdAccept
+      x-operation-id-source: derived
   /workspace-invitations/{invitationId}:
     get:
       tags:
       - Workspace
-      summary: Public invitation metadata for the invite landing page (no auth; workspace name omitted)
+      summary: Public invitation metadata for the invite landing page (no auth; workspace name…
       parameters:
       - name: invitationId
         in: path
@@ -686,6 +709,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal Server Error
+      operationId: getWorkspaceInvitationsByInvitationId
+      x-operation-id-source: derived
   /users/{userId}/workspaces/{workspaceId}/members/{memberUserId}:
     put:
       tags:
@@ -750,6 +775,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal Server Error
+      operationId: putUsersByUserIdWorkspacesByWorkspaceIdMembersByMemberUserId
+      x-operation-id-source: derived
     delete:
       tags:
       - Workspace
@@ -803,6 +830,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal Server Error
+      operationId: deleteUsersByUserIdWorkspacesByWorkspaceIdMembersByMemberUserId
+      x-operation-id-source: derived
   /users/{userId}/workspaces/{workspaceId}/integrity:
     get:
       tags:
@@ -850,6 +879,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal Server Error
+      operationId: getUsersByUserIdWorkspacesByWorkspaceIdIntegrity
+      x-operation-id-source: derived
   /users/{userId}/workspaces/{workspaceId}/sso-config:
     put:
       tags:
@@ -919,6 +950,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal Server Error
+      operationId: putUsersByUserIdWorkspacesByWorkspaceIdSsoConfig
+      x-operation-id-source: derived
   /users/{userId}/active-workspace:
     put:
       tags:
@@ -970,314 +1003,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+      operationId: putUsersByUserIdActiveWorkspace
+      x-operation-id-source: derived
 components:
   schemas:
-    WorkspacePendingInvitationAdmin:
-      type: object
-      required:
-      - workspaceInvitationId
-      - workspaceId
-      - email
-      - role
-      - status
-      - inviteTarget
-      - createdAt
-      - updatedAt
-      properties:
-        workspaceInvitationId:
-          type: string
-          format: uuid
-        workspaceId:
-          type: string
-          format: uuid
-        email:
-          type: string
-        role:
-          type: string
-        status:
-          type: string
-          enum:
-          - PENDING
-          - ACCEPTED
-          - REJECTED
-        inviteTarget:
-          type: string
-          enum:
-          - new_user
-          - existing_user
-        createdAt:
-          type: string
-        updatedAt:
-          type: string
-    WorkspaceMembersList:
-      type: object
-      required:
-      - members
-      description: Paginated list from GET .../workspaces/{workspaceId}/members
-      properties:
-        members:
-          type: array
-          items:
-            $ref: '#/components/schemas/WorkspaceMembership'
-        nextToken:
-          type: string
-          description: Present when more pages exist; pass as the nextToken query parameter
-    CreateWorkspaceRequest:
-      type: object
-      required:
-      - name
-      - type
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 120
-          description: Display name for the new workspace
-        type:
-          type: string
-          enum:
-          - team
-          - enterprise
-          - enterprise-team
-        parentWorkspaceId:
-          type: string
-          format: uuid
-          description: Required when type is enterprise-team; must be an enterprise workspace the user administers
-    ErrorResponse:
-      type: object
-      properties:
-        message:
-          type: string
-    UpdateWorkspaceRequest:
-      type: object
-      required:
-      - name
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 120
-          description: Workspace display name
-    WorkspaceMembership:
-      type: object
-      description: Membership row (PK userId, SK workspaceId). Returned by GET /users/{userId}/memberships.
-      required:
-      - userId
-      - workspaceId
-      - role
-      - createdAt
-      - updatedAt
-      properties:
-        userId:
-          type: string
-        workspaceId:
-          type: string
-          format: uuid
-        role:
-          type: string
-          enum:
-          - OWNER
-          - BILLING_ADMIN
-          - ADMIN
-          - EDITOR
-          - VIEWER
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-        memberType:
-          type: string
-          enum:
-          - sso_employee
-          - external
-          - federated_b2b2c
-          description: Optional; SSO / external / federated classification
-        federatedIdpId:
-          type: string
-          description: Optional; IdP identifier when memberType is federated_b2b2c
-        email:
-          type: string
-          description: Optional; from Users table when returned by GET .../workspaces/{workspaceId}/members
-        displayName:
-          type: string
-          description: Optional; derived from user first/last name when available
-    WorkspaceIntegrityReport:
-      type: object
-      required:
-      - workspaceId
-      - workspaceRowExists
-      - memberCount
-      - ownerCount
-      properties:
-        workspaceId:
-          type: string
-          format: uuid
-        workspaceRowExists:
-          type: boolean
-          description: Whether a workspace row exists for this id (false may indicate orphaned memberships)
-        memberCount:
-          type: integer
-          minimum: 0
-        ownerCount:
-          type: integer
-          minimum: 0
-        subscriptionIdOnWorkspace:
-          type: string
-          description: Present when the workspace row exists and has subscriptionId set
-    UserWorkspaceSwitcherItem:
-      type: object
-      description: Per-membership workspace summary for the UI switcher. Returned by GET /users/{userId}/workspaces. Hydrated fields (name, type, etc.) may be omitted if the workspace row is missing.
-      required:
-      - workspaceId
-      - role
-      properties:
-        workspaceId:
-          type: string
-          format: uuid
-        role:
-          type: string
-          enum:
-          - OWNER
-          - BILLING_ADMIN
-          - ADMIN
-          - EDITOR
-          - VIEWER
-        memberType:
-          type: string
-          enum:
-          - sso_employee
-          - external
-          - federated_b2b2c
-        federatedIdpId:
-          type: string
-        name:
-          type: string
-          description: Workspace display name when the workspace record was found
-        type:
-          type: string
-          enum:
-          - starter
-          - pro
-          - team
-          - enterprise
-          - beta
-          - enterprise-team
-        subscriptionId:
-          type: string
-          format: uuid
-        subscriptionType:
-          type: string
-          description: Billing tier of the workspace's subscription, so the client can reflect the active workspace's plan.
-          enum:
-          - starter
-          - pro
-          - team
-          - enterprise
-          - beta
-        status:
-          type: string
-          description: Status of the workspace's subscription. Maps to stripe status.
-          enum:
-          - active
-          - canceled
-          - incomplete
-          - incomplete_expired
-          - paused
-          - past_due
-          - trialing
-          - unpaid
-        parentWorkspaceId:
-          type: string
-          format: uuid
-    WorkspaceInvitationCreated:
-      type: object
-      required:
-      - workspaceInvitationId
-      - workspaceId
-      - email
-      - inviteTarget
-      - role
-      - status
-      - createdAt
-      properties:
-        workspaceInvitationId:
-          type: string
-          format: uuid
-        workspaceId:
-          type: string
-          format: uuid
-        email:
-          type: string
-        inviteTarget:
-          type: string
-          enum:
-          - new_user
-          - existing_user
-        role:
-          type: string
-        status:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-        emailSent:
-          type: boolean
-          description: Whether the invite email was sent via SES (false if EMAIL_API/origin missing or send failed)
-        inviteUrl:
-          type: string
-          format: uri
-          description: Canonical accept link (DESIGN_APP_WEB_ORIGIN + /workspace-invite/{id}); present when origin is configured so clients need not use window.location
-    WorkspaceInvitationPublic:
-      type: object
-      required:
-      - workspaceInvitationId
-      - workspaceId
-      - emailMasked
-      - inviteTarget
-      - status
-      - role
-      properties:
-        workspaceInvitationId:
-          type: string
-          format: uuid
-        workspaceId:
-          type: string
-          format: uuid
-        emailMasked:
-          type: string
-          description: Redacted invitee email for display; use GET .../email-match when authenticated to verify the signed-in account
-        inviteTarget:
-          type: string
-          enum:
-          - new_user
-          - existing_user
-        status:
-          type: string
-          enum:
-          - PENDING
-          - ACCEPTED
-          - REJECTED
-        role:
-          type: string
-    CreateWorkspaceInvitationRequest:
-      type: object
-      required:
-      - email
-      - role
-      properties:
-        email:
-          type: string
-          format: email
-        role:
-          type: string
-          enum:
-          - OWNER
-          - BILLING_ADMIN
-          - ADMIN
-          - EDITOR
-          - VIEWER
     User:
       type: object
       properties:
@@ -1345,6 +1074,65 @@ components:
           enum:
           - true
           description: Present only while an account is still going through sign-up and has not resolved the marketing consent ask. Written by account creation, cleared by the first consent write, and absent on every row created before it was introduced. Not settable via any API.
+    UpdateWorkspaceRequest:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          description: Workspace display name
+    SetActiveWorkspaceRequest:
+      type: object
+      required:
+      - activeWorkspaceId
+      properties:
+        activeWorkspaceId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: Workspace to activate for the user; null clears active workspace.
+    WorkspaceInvitationCreated:
+      type: object
+      required:
+      - workspaceInvitationId
+      - workspaceId
+      - email
+      - inviteTarget
+      - role
+      - status
+      - createdAt
+      properties:
+        workspaceInvitationId:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+        email:
+          type: string
+        inviteTarget:
+          type: string
+          enum:
+          - new_user
+          - existing_user
+        role:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        emailSent:
+          type: boolean
+          description: Whether the invite email was sent via SES (false if EMAIL_API/origin missing or send failed)
+        inviteUrl:
+          type: string
+          format: uri
+          description: Canonical accept link (DESIGN_APP_WEB_ORIGIN + /workspace-invite/{id}); present when origin is configured so clients need not use window.location
     UpdateMembershipRoleRequest:
       type: object
       required:
@@ -1358,6 +1146,145 @@ components:
           - ADMIN
           - EDITOR
           - VIEWER
+    WorkspacePendingInvitationAdmin:
+      type: object
+      required:
+      - workspaceInvitationId
+      - workspaceId
+      - email
+      - role
+      - status
+      - inviteTarget
+      - createdAt
+      - updatedAt
+      properties:
+        workspaceInvitationId:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+        email:
+          type: string
+        role:
+          type: string
+        status:
+          type: string
+          enum:
+          - PENDING
+          - ACCEPTED
+          - REJECTED
+        inviteTarget:
+          type: string
+          enum:
+          - new_user
+          - existing_user
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+    WorkspaceInvitationPublic:
+      type: object
+      required:
+      - workspaceInvitationId
+      - workspaceId
+      - emailMasked
+      - inviteTarget
+      - status
+      - role
+      properties:
+        workspaceInvitationId:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+        emailMasked:
+          type: string
+          description: Redacted invitee email for display; use GET .../email-match when authenticated to verify the signed-in account
+        inviteTarget:
+          type: string
+          enum:
+          - new_user
+          - existing_user
+        status:
+          type: string
+          enum:
+          - PENDING
+          - ACCEPTED
+          - REJECTED
+        role:
+          type: string
+    UserWorkspaceSwitcherItem:
+      type: object
+      description: Per-membership workspace summary for the UI switcher. Returned by GET /users/{userId}/workspaces. Hydrated fields (name, type, etc.) may be omitted if the workspace row is missing.
+      required:
+      - workspaceId
+      - role
+      properties:
+        workspaceId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum:
+          - OWNER
+          - BILLING_ADMIN
+          - ADMIN
+          - EDITOR
+          - VIEWER
+        memberType:
+          type: string
+          enum:
+          - sso_employee
+          - external
+          - federated_b2b2c
+        federatedIdpId:
+          type: string
+        name:
+          type: string
+          description: Workspace display name when the workspace record was found
+        type:
+          type: string
+          enum:
+          - starter
+          - pro
+          - team
+          - enterprise
+          - beta
+          - enterprise-team
+        subscriptionId:
+          type: string
+          format: uuid
+        subscriptionType:
+          type: string
+          description: Billing tier of the workspace's subscription, so the client can reflect the active workspace's plan.
+          enum:
+          - starter
+          - pro
+          - team
+          - enterprise
+          - beta
+        status:
+          type: string
+          description: Status of the workspace's subscription. Maps to stripe status.
+          enum:
+          - active
+          - canceled
+          - incomplete
+          - incomplete_expired
+          - paused
+          - past_due
+          - trialing
+          - unpaid
+        parentWorkspaceId:
+          type: string
+          format: uuid
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
     MarketingConsentReceipt:
       type: object
       description: Marketing opt-in receipt (GDPR consent provenance). Present only for users who made an explicit choice; optIn records that choice either way. Synced to HubSpot as the marketing_opt_in contact property. Absent for users who have never been asked or who dismissed the prompt.
@@ -1386,17 +1313,125 @@ components:
           - settings
           - email-unsubscribe
           - email-spam-complaint
-    SetActiveWorkspaceRequest:
+    WorkspaceMembersList:
       type: object
       required:
-      - activeWorkspaceId
+      - members
+      description: Paginated list from GET .../workspaces/{workspaceId}/members
       properties:
-        activeWorkspaceId:
-          type:
-          - string
-          - 'null'
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceMembership'
+        nextToken:
+          type: string
+          description: Present when more pages exist; pass as the nextToken query parameter
+    CreateWorkspaceInvitationRequest:
+      type: object
+      required:
+      - email
+      - role
+      properties:
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum:
+          - OWNER
+          - BILLING_ADMIN
+          - ADMIN
+          - EDITOR
+          - VIEWER
+    WorkspaceIntegrityReport:
+      type: object
+      required:
+      - workspaceId
+      - workspaceRowExists
+      - memberCount
+      - ownerCount
+      properties:
+        workspaceId:
+          type: string
           format: uuid
-          description: Workspace to activate for the user; null clears active workspace.
+        workspaceRowExists:
+          type: boolean
+          description: Whether a workspace row exists for this id (false may indicate orphaned memberships)
+        memberCount:
+          type: integer
+          minimum: 0
+        ownerCount:
+          type: integer
+          minimum: 0
+        subscriptionIdOnWorkspace:
+          type: string
+          description: Present when the workspace row exists and has subscriptionId set
+    WorkspaceMembership:
+      type: object
+      description: Membership row (PK userId, SK workspaceId). Returned by GET /users/{userId}/memberships.
+      required:
+      - userId
+      - workspaceId
+      - role
+      - createdAt
+      - updatedAt
+      properties:
+        userId:
+          type: string
+        workspaceId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum:
+          - OWNER
+          - BILLING_ADMIN
+          - ADMIN
+          - EDITOR
+          - VIEWER
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        memberType:
+          type: string
+          enum:
+          - sso_employee
+          - external
+          - federated_b2b2c
+          description: Optional; SSO / external / federated classification
+        federatedIdpId:
+          type: string
+          description: Optional; IdP identifier when memberType is federated_b2b2c
+        email:
+          type: string
+          description: Optional; from Users table when returned by GET .../workspaces/{workspaceId}/members
+        displayName:
+          type: string
+          description: Optional; derived from user first/last name when available
+    CreateWorkspaceRequest:
+      type: object
+      required:
+      - name
+      - type
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          description: Display name for the new workspace
+        type:
+          type: string
+          enum:
+          - team
+          - enterprise
+          - enterprise-team
+        parentWorkspaceId:
+          type: string
+          format: uuid
+          description: Required when type is enterprise-team; must be an enterprise workspace the user administers
   securitySchemes:
     cognitoUserAuth:
       type: oauth2

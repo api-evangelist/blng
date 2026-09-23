@@ -412,142 +412,6 @@ paths:
       - cognitoUserAuth: []
 components:
   schemas:
-    JourneySpecifics:
-      type: object
-      properties:
-        height:
-          type: number
-        historicImages:
-          type: array
-          deprecated: true
-          description: List of image IDs that were generated from prompts, this property is deprecated and will be removed in the future
-          items:
-            type: string
-        layers:
-          type: array
-          items:
-            $ref: '#/components/schemas/Layer'
-        name:
-          type: string
-        preview:
-          type: string
-        lastGenerateImageId:
-          description: asset ID of the last generated image from a chat prompt, updated when a chat prompt result is processed
-          type: string
-        visibleCanvasImageId:
-          description: asset ID of what the current canvas looks like (also called flattened), updated by clients when saving a layer
-          type: string
-        sceneImageId:
-          description: asset ID of the image used as the scene style in the app
-          type: string
-        width:
-          type: number
-        backgroundColor:
-          $ref: '#/components/schemas/Color'
-        references:
-          type: array
-          items:
-            $ref: '#/components/schemas/AssetReference'
-    LegacyLayer:
-      type: object
-      deprecated: true
-      description: Pre-discriminator layer shape. Accepted verbatim for back-compat; no server-side coercion.
-      properties:
-        name:
-          type: string
-          description: Name of the layer.
-        image:
-          $ref: '#/components/schemas/LayerImage'
-        visible:
-          type: boolean
-        locked:
-          type: boolean
-        blendMode:
-          type: string
-          description: Blending mode for compositing this layer in 2D.
-          example: normal
-        opacity:
-          type: number
-        width:
-          type: number
-        height:
-          type: number
-        resolution:
-          type: number
-          description: Resolution multiplier (legacy).
-          deprecated: true
-        originScale:
-          type: string
-          enum:
-          - 1x
-          - 2x
-          - 3x
-          - upscale4x
-          - external
-          deprecated: true
-      required:
-      - name
-    LayerModel3D:
-      type: object
-      required:
-      - modelId
-      - transform
-      properties:
-        modelId:
-          type: string
-          description: References a Model3D entity in this journey.
-        resolvedAssetId:
-          type: string
-          readOnly: true
-          description: Server-populated convenience pointer to the concrete asset currently used for this client/platform.
-        transform:
-          $ref: '#/components/schemas/Transform3D'
-    LayerImage:
-      type: object
-      properties:
-        id:
-          type: string
-          description: ID of the layer's image asset
-        width:
-          type: number
-          description: Width of the image
-        height:
-          type: number
-          description: Height of the image
-        top:
-          type: number
-          description: Topmost Y coordinate of the image
-        left:
-          type: number
-          description: Leftmost X coordinate of the image
-    Journey:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Unique identifier for the journey
-        userId:
-          type: string
-          description: Unique identifier for the user
-        type:
-          type: string
-          description: Type of the journey (design or shopping)
-        createdAt:
-          type: string
-          format: date-time
-          description: Timestamp of when the journey was created
-        updatedAt:
-          type: string
-          format: date-time
-          description: Timestamp of the last update to the journey
-        images:
-          type: array
-          items:
-            type: string
-          description: List of image IDs associated with the journey, this property is deprecated and will no longer be returned to clients
-          deprecated: true
-        specifics:
-          $ref: '#/components/schemas/JourneySpecifics'
     Layer:
       oneOf:
       - $ref: '#/components/schemas/ImageLayer'
@@ -558,98 +422,6 @@ components:
         mapping:
           image: '#/components/schemas/ImageLayer'
           model: '#/components/schemas/ModelLayer'
-    Color:
-      type: object
-      properties:
-        red:
-          type: integer
-          description: Red component of the color (0-255)
-        green:
-          type: integer
-          description: Green component of the color (0-255)
-        blue:
-          type: integer
-          description: Blue component of the color (0-255)
-        alpha:
-          type: number
-          format: float
-          description: Alpha component of the color (0.0-1.0)
-    Vector3:
-      type: object
-      properties:
-        x:
-          type: number
-        y:
-          type: number
-        z:
-          type: number
-      required:
-      - x
-      - y
-      - z
-    AssetReference:
-      type: object
-      properties:
-        assetId:
-          type: string
-        type:
-          type: string
-          description: Type of the asset reference.
-          enum:
-          - canvas
-          - asset
-        influence:
-          type: number
-          minimum: 0
-          maximum: 1
-        intent:
-          type: array
-          description: Per-image guidance from the reference context menu — aspect chips (e.g. texture, color) and/or free text describing how this image should influence the generation. Passed through to the design pipeline verbatim; sanitized there.
-          items:
-            type: string
-    ImageLayer:
-      type: object
-      required:
-      - layerType
-      - name
-      - visible
-      - locked
-      - opacity
-      - image
-      properties:
-        layerType:
-          type: string
-          enum:
-          - image
-          description: Discriminator indicating an image (2D) layer.
-        name:
-          type: string
-          description: Name of the layer
-        image:
-          $ref: '#/components/schemas/LayerImage'
-        visible:
-          type: boolean
-        locked:
-          type: boolean
-        blendMode:
-          type: string
-          description: Blending mode for compositing this layer in 2D.
-        opacity:
-          type: number
-        width:
-          type: number
-        height:
-          type: number
-        originScale:
-          type: string
-          enum:
-          - 1x
-          - 2x
-          - 3x
-          - upscale4x
-          - external
-          description: Deprecated legacy field preserved for compatibility.
-          deprecated: true
     ModelLayer:
       type: object
       required:
@@ -693,6 +465,214 @@ components:
       - y
       - z
       - w
+    Color:
+      type: object
+      properties:
+        red:
+          type: integer
+          description: Red component of the color (0-255)
+        green:
+          type: integer
+          description: Green component of the color (0-255)
+        blue:
+          type: integer
+          description: Blue component of the color (0-255)
+        alpha:
+          type: number
+          format: float
+          description: Alpha component of the color (0.0-1.0)
+    Journey:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the journey
+        userId:
+          type: string
+          description: Unique identifier for the user
+        type:
+          type: string
+          description: Type of the journey (design or shopping)
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the journey was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last update to the journey
+        images:
+          type: array
+          items:
+            type: string
+          description: List of image IDs associated with the journey, this property is deprecated and will no longer be returned to clients
+          deprecated: true
+        specifics:
+          $ref: '#/components/schemas/JourneySpecifics'
+    LayerImage:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID of the layer's image asset
+        width:
+          type: number
+          description: Width of the image
+        height:
+          type: number
+          description: Height of the image
+        top:
+          type: number
+          description: Topmost Y coordinate of the image
+        left:
+          type: number
+          description: Leftmost X coordinate of the image
+    LayerModel3D:
+      type: object
+      required:
+      - modelId
+      - transform
+      properties:
+        modelId:
+          type: string
+          description: References a Model3D entity in this journey.
+        resolvedAssetId:
+          type: string
+          readOnly: true
+          description: Server-populated convenience pointer to the concrete asset currently used for this client/platform.
+        transform:
+          $ref: '#/components/schemas/Transform3D'
+    Vector3:
+      type: object
+      properties:
+        x:
+          type: number
+        y:
+          type: number
+        z:
+          type: number
+      required:
+      - x
+      - y
+      - z
+    LegacyLayer:
+      type: object
+      deprecated: true
+      description: Pre-discriminator layer shape. Accepted verbatim for back-compat; no server-side coercion.
+      properties:
+        name:
+          type: string
+          description: Name of the layer.
+        image:
+          $ref: '#/components/schemas/LayerImage'
+        visible:
+          type: boolean
+        locked:
+          type: boolean
+        blendMode:
+          type: string
+          description: Blending mode for compositing this layer in 2D.
+          example: normal
+        opacity:
+          type: number
+        width:
+          type: number
+        height:
+          type: number
+        resolution:
+          type: number
+          description: Resolution multiplier (legacy).
+          deprecated: true
+        originScale:
+          type: string
+          enum:
+          - 1x
+          - 2x
+          - 3x
+          - upscale4x
+          - external
+          deprecated: true
+      required:
+      - name
+    JourneySpecifics:
+      type: object
+      properties:
+        height:
+          type: number
+        historicImages:
+          type: array
+          deprecated: true
+          description: List of image IDs that were generated from prompts, this property is deprecated and will be removed in the future
+          items:
+            type: string
+        layers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Layer'
+        name:
+          type: string
+        preview:
+          type: string
+        lastGenerateImageId:
+          description: asset ID of the last generated image from a chat prompt, updated when a chat prompt result is processed
+          type: string
+        visibleCanvasImageId:
+          description: asset ID of what the current canvas looks like (also called flattened), updated by clients when saving a layer
+          type: string
+        sceneImageId:
+          description: asset ID of the image used as the scene style in the app
+          type: string
+        width:
+          type: number
+        backgroundColor:
+          $ref: '#/components/schemas/Color'
+        references:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetReference'
+    ImageLayer:
+      type: object
+      required:
+      - layerType
+      - name
+      - visible
+      - locked
+      - opacity
+      - image
+      properties:
+        layerType:
+          type: string
+          enum:
+          - image
+          description: Discriminator indicating an image (2D) layer.
+        name:
+          type: string
+          description: Name of the layer
+        image:
+          $ref: '#/components/schemas/LayerImage'
+        visible:
+          type: boolean
+        locked:
+          type: boolean
+        blendMode:
+          type: string
+          description: Blending mode for compositing this layer in 2D.
+        opacity:
+          type: number
+        width:
+          type: number
+        height:
+          type: number
+        originScale:
+          type: string
+          enum:
+          - 1x
+          - 2x
+          - 3x
+          - upscale4x
+          - external
+          description: Deprecated legacy field preserved for compatibility.
+          deprecated: true
     Transform3D:
       type: object
       properties:
@@ -706,6 +686,26 @@ components:
       - position
       - rotationDegrees
       - scale
+    AssetReference:
+      type: object
+      properties:
+        assetId:
+          type: string
+        type:
+          type: string
+          description: Type of the asset reference.
+          enum:
+          - canvas
+          - asset
+        influence:
+          type: number
+          minimum: 0
+          maximum: 1
+        intent:
+          type: array
+          description: Per-image guidance from the reference context menu — aspect chips (e.g. texture, color) and/or free text describing how this image should influence the generation. Passed through to the design pipeline verbatim; sanitized there.
+          items:
+            type: string
   securitySchemes:
     bearerAuth:
       type: http

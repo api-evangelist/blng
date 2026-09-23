@@ -3,9 +3,6 @@ info:
   title: User Tooltip API
   description: Api to manage roles and permissions of users
   version: 1.0.0
-servers:
-- url: https://users.blng.ai
-  description: Base URL declared by the provider in apis.yml (roadmap#122).
 tags:
 - name: User Tooltip
 paths:
@@ -53,6 +50,8 @@ paths:
           description: User not found
         '500':
           description: Internal Server Error
+      operationId: getUsersByUserIdTooltips
+      x-operation-id-source: derived
   /users/{userId}/tooltips/resetAll:
     post:
       tags:
@@ -81,78 +80,10 @@ paths:
           description: User not found
         '500':
           description: Internal Server Error
+      operationId: postUsersByUserIdTooltipsResetAll
+      x-operation-id-source: derived
 components:
   schemas:
-    UserTooltipFlow:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Unique id for the flow
-        name:
-          type: string
-          description: Name of the flow
-        pages:
-          type: array
-          description: What pages/views the tooltip flow is designed for
-          items:
-            type: string
-        devices:
-          type: array
-          description: What devices the tooltip flow is designed for
-          items:
-            type: string
-            enum:
-            - web
-            - ios
-            - ipad
-        tooltipRegistrations:
-          type: array
-          items:
-            $ref: '#/components/schemas/TooltipRegistration'
-        seenByUser:
-          type: boolean
-          description: Whether this tooltip flow was seen by the user or not
-    TooltipRegistration:
-      type: object
-      properties:
-        tooltip:
-          $ref: '#/components/schemas/Tooltip'
-        attachmentPoint:
-          type: object
-          description: How the tooltip will be attached to the interface for different devices
-          properties:
-            web:
-              type: object
-              properties:
-                dataTooltip:
-                  type: string
-                  description: data-tooltip attribute that this tooltip will attach to
-                side:
-                  type: string
-                  enum:
-                  - top
-                  - right
-                  - bottom
-                  - left
-                  - over
-                align:
-                  type: string
-                  enum:
-                  - start
-                  - center
-                  - end
-            ios:
-              type: object
-            ipad:
-              type: object
-    TooltipResponse:
-      type: object
-      properties:
-        tooltipFlows:
-          type: array
-          items:
-            $ref: '#/components/schemas/UserTooltipFlow'
     Tooltip:
       type: object
       properties:
@@ -266,6 +197,76 @@ components:
           - settings
           - email-unsubscribe
           - email-spam-complaint
+    TooltipResponse:
+      type: object
+      properties:
+        tooltipFlows:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserTooltipFlow'
+    TooltipRegistration:
+      type: object
+      properties:
+        tooltip:
+          $ref: '#/components/schemas/Tooltip'
+        attachmentPoint:
+          type: object
+          description: How the tooltip will be attached to the interface for different devices
+          properties:
+            web:
+              type: object
+              properties:
+                dataTooltip:
+                  type: string
+                  description: data-tooltip attribute that this tooltip will attach to
+                side:
+                  type: string
+                  enum:
+                  - top
+                  - right
+                  - bottom
+                  - left
+                  - over
+                align:
+                  type: string
+                  enum:
+                  - start
+                  - center
+                  - end
+            ios:
+              type: object
+            ipad:
+              type: object
+    UserTooltipFlow:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique id for the flow
+        name:
+          type: string
+          description: Name of the flow
+        pages:
+          type: array
+          description: What pages/views the tooltip flow is designed for
+          items:
+            type: string
+        devices:
+          type: array
+          description: What devices the tooltip flow is designed for
+          items:
+            type: string
+            enum:
+            - web
+            - ios
+            - ipad
+        tooltipRegistrations:
+          type: array
+          items:
+            $ref: '#/components/schemas/TooltipRegistration'
+        seenByUser:
+          type: boolean
+          description: Whether this tooltip flow was seen by the user or not
   securitySchemes:
     cognitoUserAuth:
       type: oauth2

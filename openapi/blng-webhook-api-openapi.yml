@@ -3,9 +3,6 @@ info:
   title: Billing Webhook API
   description: Api to manage user's payment and billing
   version: 1.0.0
-servers:
-- url: https://billing.blng.ai
-  description: Base URL declared by the provider in apis.yml (roadmap#122).
 tags:
 - name: Webhook
 paths:
@@ -39,6 +36,8 @@ paths:
           description: Invalid request parameters
         '500':
           description: Internal server error
+      operationId: postBillingWebhookCheckoutSessionCompleted
+      x-operation-id-source: derived
   /billing/webhook/customerSubscriptionUpdated:
     post:
       tags:
@@ -66,6 +65,8 @@ paths:
           description: Invalid request parameters
         '500':
           description: Internal server error
+      operationId: postBillingWebhookCustomerSubscriptionUpdated
+      x-operation-id-source: derived
   /billing/webhook/customerSubscriptionDeleted:
     post:
       tags:
@@ -93,6 +94,8 @@ paths:
           description: Invalid request parameters
         '500':
           description: Internal server error
+      operationId: postBillingWebhookCustomerSubscriptionDeleted
+      x-operation-id-source: derived
 components:
   schemas:
     StripeSubscription:

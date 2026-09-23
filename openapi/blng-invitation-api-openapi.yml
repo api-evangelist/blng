@@ -3,9 +3,6 @@ info:
   title: User Invitation API
   description: Api to manage roles and permissions of users
   version: 1.0.0
-servers:
-- url: https://users.blng.ai
-  description: Base URL declared by the provider in apis.yml (roadmap#122).
 tags:
 - name: Invitation
 paths:
@@ -43,6 +40,8 @@ paths:
           description: Conflict (e.g., invitation already exists)
         '500':
           description: Internal Server Error
+      operationId: postInvitations
+      x-operation-id-source: derived
     get:
       tags:
       - Invitation
@@ -67,6 +66,8 @@ paths:
           description: Bad Request
         '500':
           description: Internal Server Error
+      operationId: getInvitations
+      x-operation-id-source: derived
   /invitations/{invitationId}:
     get:
       tags:
@@ -93,6 +94,8 @@ paths:
           description: Invitation not found
         '500':
           description: Internal Server Error
+      operationId: getInvitationsByInvitationId
+      x-operation-id-source: derived
     put:
       tags:
       - Invitation
@@ -129,6 +132,8 @@ paths:
           description: Conflict (e.g. invalid update state)
         '500':
           description: Internal Server Error
+      operationId: putInvitationsByInvitationId
+      x-operation-id-source: derived
     delete:
       tags:
       - Invitation
@@ -152,6 +157,8 @@ paths:
           description: Invitation not found
         '500':
           description: Internal Server Error
+      operationId: deleteInvitationsByInvitationId
+      x-operation-id-source: derived
   /invitations/{invitationId}/resend:
     post:
       tags:
@@ -178,6 +185,8 @@ paths:
           description: Invitation not found
         '500':
           description: Internal Server Error
+      operationId: postInvitationsByInvitationIdResend
+      x-operation-id-source: derived
   /invitations/{invitationId}/accept:
     post:
       tags:
@@ -217,6 +226,8 @@ paths:
           description: Conflict (e.g., user already accepted)
         '500':
           description: Internal Server Error
+      operationId: postInvitationsByInvitationIdAccept
+      x-operation-id-source: derived
   /invitations/subscriptions/{subscriptionId}:
     get:
       tags:
@@ -245,6 +256,8 @@ paths:
           description: Subscription not found
         '500':
           description: Internal Server Error
+      operationId: getInvitationsSubscriptionsBySubscriptionId
+      x-operation-id-source: derived
 components:
   schemas:
     Invitation:

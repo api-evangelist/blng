@@ -3,9 +3,6 @@ info:
   title: User Organization API
   description: Api to manage roles and permissions of users
   version: 1.0.0
-servers:
-- url: https://users.blng.ai
-  description: Base URL declared by the provider in apis.yml (roadmap#122).
 tags:
 - name: Organization
 paths:
@@ -26,6 +23,8 @@ paths:
                   $ref: '#/components/schemas/Organization'
         '500':
           description: Internal Server Error
+      operationId: getOrganizations
+      x-operation-id-source: derived
     post:
       tags:
       - Organization
@@ -59,6 +58,8 @@ paths:
           description: Bad Request
         '500':
           description: Internal Server Error
+      operationId: postOrganizations
+      x-operation-id-source: derived
   /organizations/{organizationId}:
     get:
       tags:
@@ -85,6 +86,8 @@ paths:
           description: Organization not found
         '500':
           description: Internal Server Error
+      operationId: getOrganizationsByOrganizationId
+      x-operation-id-source: derived
     put:
       tags:
       - Organization
@@ -126,15 +129,15 @@ paths:
           description: Organization not found
         '500':
           description: Internal Server Error
+      operationId: putOrganizationsByOrganizationId
+      x-operation-id-source: derived
   /composite/createOrgAndSubscriptionWithUser:
     post:
       tags:
       - Organization
-      summary: Creates an organization, a subscription, and a user, and attaches them in one transaction
+      summary: Creates an organization, a subscription, and a user, and attaches them in one…
       deprecated: true
-      description: 'Creates a new organization , a new subscription , and attaches an existing user to the subscription with an admin role. This is **not strictly REST** because it handles multiple resources in one call, but it simplifies our client needs
-
-        '
+      description: Creates a new organization , a new subscription , and attaches an existing user to the subscription with an admin role. This is **not strictly REST** because it handles multiple resources in one call, but it simplifies our client needs
       requestBody:
         required: true
         content:
@@ -182,6 +185,8 @@ paths:
           description: Conflict (e.g., organization or subscription already exists in a conflicting state)
         '500':
           description: Internal Server Error
+      operationId: postCompositeCreateOrgAndSubscriptionWithUser
+      x-operation-id-source: derived
 components:
   schemas:
     Organization:
@@ -204,15 +209,6 @@ components:
           type: string
           format: date-time
           description: Timestamp of the last update to organization
-    Entitlements:
-      type: object
-      properties:
-        maxJourneys:
-          type: integer
-          description: Maximum number of journeys allowed on a subscription. -1 for unlimited.
-        chatVisibilityWindowHrs:
-          type: integer
-          description: Maximum number of hours to let a user look back in chat history. -1 for unlimited.
     Subscription:
       type: object
       properties:
@@ -288,6 +284,15 @@ components:
           type: string
           format: date-time
           description: Timestamp of the last update to subscription
+    Entitlements:
+      type: object
+      properties:
+        maxJourneys:
+          type: integer
+          description: Maximum number of journeys allowed on a subscription. -1 for unlimited.
+        chatVisibilityWindowHrs:
+          type: integer
+          description: Maximum number of hours to let a user look back in chat history. -1 for unlimited.
   securitySchemes:
     cognitoUserAuth:
       type: oauth2

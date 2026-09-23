@@ -10,7 +10,7 @@ tags:
 paths:
   /journeys/{journeyId}/prompts:
     get:
-      summary: Retrieve paginated prompts for a specific journey, sorted from newest to oldest.
+      summary: Retrieve paginated prompts for a specific journey, sorted from newest to oldest
       operationId: getPromptsForJourney
       tags:
       - Prompts
@@ -185,9 +185,7 @@ paths:
       summary: Cancel design-v3 prompt processing before a plan exists
       description: 'Marks the prompt as pipeline-cancelled and completed so the user can submit a new prompt.
 
-        Once `response.planId` exists, use `POST .../plans/{planId}/cancel` instead.
-
-        '
+        Once `response.planId` exists, use `POST .../plans/{planId}/cancel` instead.'
       operationId: cancelPromptProcessingBeforePlan
       tags:
       - Prompts
@@ -255,16 +253,6 @@ paths:
       - cognitoUserAuth: []
 components:
   schemas:
-    PromptResponse:
-      type: object
-      properties:
-        timestamp:
-          type: string
-          format: date-time
-          description: Timestamp when the response was generated.
-        type:
-          type: string
-          description: The type of prompt (e.g., design, design-v2 etc.).
     Prompt:
       type: object
       properties:
@@ -308,6 +296,16 @@ components:
       - id
       - journeyId
       - request
+    PromptResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the response was generated.
+        type:
+          type: string
+          description: The type of prompt (e.g., design, design-v2 etc.).
     PromptRequest:
       type: object
       properties:

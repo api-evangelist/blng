@@ -56,7 +56,7 @@ tags:
 - Marketing
 - Retail
 - 3D Models
-- Image-Generation
+- Image Generation
 - Workspace
 - Billing
 - OpenAPI
@@ -76,6 +76,7 @@ tags_raw:
 - Billing
 - OpenAPI
 - AWS Cognito
+- Image-Generation
 apis:
 - name: BLNG User API
   description: >-

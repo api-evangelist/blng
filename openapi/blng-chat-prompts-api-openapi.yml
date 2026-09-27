@@ -96,13 +96,17 @@ paths:
       - cognitoUserAuth: []
 components:
   schemas:
-    ImageDimensions:
+    AssetDetails:
       type: object
       properties:
-        width:
-          type: number
-        height:
-          type: number
+        lassoMaskId:
+          type: string
+        isColorAsset:
+          type: boolean
+        references:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetReference'
     Color:
       type: object
       properties:
@@ -119,6 +123,31 @@ components:
           type: number
           format: float
           description: Alpha component of the color (0.0-1.0)
+    ChatPrompt:
+      type: object
+      properties:
+        promptId:
+          type: string
+          description: Unique identifier for the chat prompt.
+        journeyId:
+          type: string
+          description: Identifier of the journey this chat prompt is associated with.
+        request:
+          $ref: '#/components/schemas/ChatPromptRequest'
+        response:
+          $ref: '#/components/schemas/ChatPromptResponse'
+      required:
+      - promptId
+      - journeyId
+      - request
+      - response
+    ImageDimensions:
+      type: object
+      properties:
+        width:
+          type: number
+        height:
+          type: number
     ChatPromptRequestV3:
       allOf:
       - $ref: '#/components/schemas/PromptRequest'
@@ -168,24 +197,26 @@ components:
         - userAgent
         - userMessage
         - variantCount
-    ChatPrompt:
+    PromptResponse:
       type: object
       properties:
-        promptId:
+        timestamp:
           type: string
-          description: Unique identifier for the chat prompt.
-        journeyId:
+          format: date-time
+          description: Timestamp when the response was generated.
+        type:
           type: string
-          description: Identifier of the journey this chat prompt is associated with.
-        request:
-          $ref: '#/components/schemas/ChatPromptRequest'
-        response:
-          $ref: '#/components/schemas/ChatPromptResponse'
+          description: The type of prompt (e.g., design, design-v2 etc.).
+    LassoMask:
+      type: object
+      description: Details about a lasso mask selection.
+      properties:
+        lassoMaskId:
+          type: string
+        auxiliarySketchId:
+          type: string
       required:
-      - promptId
-      - journeyId
-      - request
-      - response
+      - lassoMaskId
     PromptRequest:
       type: object
       properties:
@@ -204,16 +235,25 @@ components:
           description: User agent string of the client that generated the prompt.
       required:
       - type
-    LassoMask:
-      type: object
-      description: Details about a lasso mask selection.
-      properties:
-        lassoMaskId:
-          type: string
-        auxiliarySketchId:
-          type: string
-      required:
-      - lassoMaskId
+    ChatPromptResponse:
+      allOf:
+      - $ref: '#/components/schemas/PromptResponse'
+      - type: object
+        properties:
+          status:
+            type: string
+            enum:
+            - succeeded
+            - failed
+            - expired
+          botMessage:
+            type: string
+            description: The AI-generated response to the chat message.
+          generatedImageIds:
+            type: array
+            description: List of asset IDs for images generated as part of the prompt result.
+            items:
+              type: string
     ImageGenPromptDetails:
       type: object
       properties:
@@ -254,46 +294,6 @@ components:
         required:
         - userMessage
         - type
-    PromptResponse:
-      type: object
-      properties:
-        timestamp:
-          type: string
-          format: date-time
-          description: Timestamp when the response was generated.
-        type:
-          type: string
-          description: The type of prompt (e.g., design, design-v2 etc.).
-    ChatPromptResponse:
-      allOf:
-      - $ref: '#/components/schemas/PromptResponse'
-      - type: object
-        properties:
-          status:
-            type: string
-            enum:
-            - succeeded
-            - failed
-            - expired
-          botMessage:
-            type: string
-            description: The AI-generated response to the chat message.
-          generatedImageIds:
-            type: array
-            description: List of asset IDs for images generated as part of the prompt result.
-            items:
-              type: string
-    AssetDetails:
-      type: object
-      properties:
-        lassoMaskId:
-          type: string
-        isColorAsset:
-          type: boolean
-        references:
-          type: array
-          items:
-            $ref: '#/components/schemas/AssetReference'
     AssetReference:
       type: object
       properties:

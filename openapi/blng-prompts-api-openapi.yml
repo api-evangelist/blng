@@ -253,6 +253,34 @@ paths:
       - cognitoUserAuth: []
 components:
   schemas:
+    PromptResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the response was generated.
+        type:
+          type: string
+          description: The type of prompt (e.g., design, design-v2 etc.).
+    PromptRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the prompt request. The server will create this if not provided.
+        type:
+          type: string
+          description: The type of prompt (e.g., design, design-v2 etc.).
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when the prompt was generated.
+        userAgent:
+          type: string
+          description: User agent string of the client that generated the prompt.
+      required:
+      - type
     Prompt:
       type: object
       properties:
@@ -296,34 +324,6 @@ components:
       - id
       - journeyId
       - request
-    PromptResponse:
-      type: object
-      properties:
-        timestamp:
-          type: string
-          format: date-time
-          description: Timestamp when the response was generated.
-        type:
-          type: string
-          description: The type of prompt (e.g., design, design-v2 etc.).
-    PromptRequest:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Unique identifier for the prompt request. The server will create this if not provided.
-        type:
-          type: string
-          description: The type of prompt (e.g., design, design-v2 etc.).
-        timestamp:
-          type: string
-          format: date-time
-          description: Timestamp when the prompt was generated.
-        userAgent:
-          type: string
-          description: User agent string of the client that generated the prompt.
-      required:
-      - type
   securitySchemes:
     bearerAuth:
       type: http

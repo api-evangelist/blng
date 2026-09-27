@@ -84,24 +84,6 @@ paths:
       x-operation-id-source: derived
 components:
   schemas:
-    Tooltip:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Unique id for the tooltip
-        name:
-          type: string
-          description: Name of the tooltip
-        icon:
-          type: string
-          description: Icon to show next to the title
-        title:
-          type: string
-          description: Title for the tooltip
-        description:
-          type: string
-          description: Contents for the tooltip
     User:
       type: object
       properties:
@@ -169,41 +151,6 @@ components:
           enum:
           - true
           description: Present only while an account is still going through sign-up and has not resolved the marketing consent ask. Written by account creation, cleared by the first consent write, and absent on every row created before it was introduced. Not settable via any API.
-    MarketingConsentReceipt:
-      type: object
-      description: Marketing opt-in receipt (GDPR consent provenance). Present only for users who made an explicit choice; optIn records that choice either way. Synced to HubSpot as the marketing_opt_in contact property. Absent for users who have never been asked or who dismissed the prompt.
-      required:
-      - optIn
-      - timestamp
-      - wordingVersion
-      - captureLocation
-      properties:
-        optIn:
-          type: boolean
-          description: The user's choice
-        timestamp:
-          type: string
-          format: date-time
-          description: When the choice was captured. Server-stamped; never accepted from the caller.
-        wordingVersion:
-          type: string
-          description: Version tag of the exact consent wording shown, so the receipt survives copy changes
-        captureLocation:
-          type: string
-          description: Which surface captured the choice. `email-unsubscribe` and `email-spam-complaint` are withdrawals the recipient made against mail we sent, the first through an unsubscribe link and the second by reporting it to their provider. Both are recorded from the CRM's own subscription-change events rather than through this API.
-          enum:
-          - signup
-          - first-login-prompt
-          - settings
-          - email-unsubscribe
-          - email-spam-complaint
-    TooltipResponse:
-      type: object
-      properties:
-        tooltipFlows:
-          type: array
-          items:
-            $ref: '#/components/schemas/UserTooltipFlow'
     TooltipRegistration:
       type: object
       properties:
@@ -267,6 +214,59 @@ components:
         seenByUser:
           type: boolean
           description: Whether this tooltip flow was seen by the user or not
+    Tooltip:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique id for the tooltip
+        name:
+          type: string
+          description: Name of the tooltip
+        icon:
+          type: string
+          description: Icon to show next to the title
+        title:
+          type: string
+          description: Title for the tooltip
+        description:
+          type: string
+          description: Contents for the tooltip
+    TooltipResponse:
+      type: object
+      properties:
+        tooltipFlows:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserTooltipFlow'
+    MarketingConsentReceipt:
+      type: object
+      description: Marketing opt-in receipt (GDPR consent provenance). Present only for users who made an explicit choice; optIn records that choice either way. Synced to HubSpot as the marketing_opt_in contact property. Absent for users who have never been asked or who dismissed the prompt.
+      required:
+      - optIn
+      - timestamp
+      - wordingVersion
+      - captureLocation
+      properties:
+        optIn:
+          type: boolean
+          description: The user's choice
+        timestamp:
+          type: string
+          format: date-time
+          description: When the choice was captured. Server-stamped; never accepted from the caller.
+        wordingVersion:
+          type: string
+          description: Version tag of the exact consent wording shown, so the receipt survives copy changes
+        captureLocation:
+          type: string
+          description: Which surface captured the choice. `email-unsubscribe` and `email-spam-complaint` are withdrawals the recipient made against mail we sent, the first through an unsubscribe link and the second by reporting it to their provider. Both are recorded from the CRM's own subscription-change events rather than through this API.
+          enum:
+          - signup
+          - first-login-prompt
+          - settings
+          - email-unsubscribe
+          - email-spam-complaint
   securitySchemes:
     cognitoUserAuth:
       type: oauth2

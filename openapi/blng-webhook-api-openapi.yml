@@ -98,6 +98,21 @@ paths:
       x-operation-id-source: derived
 components:
   schemas:
+    CheckoutSessionCompletedRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+          description: The ID of the user associated with the checkout session
+          example: userId-xxx
+        subscriptionId:
+          type: string
+          description: The ID of the subscription associated with the checkout session
+          example: subId-xxx
+        checkoutSessionId:
+          type: string
+          description: The unique identifier for the Stripe checkout session
+          example: checkoutSessionId-xxx
     StripeSubscription:
       type: object
       properties:
@@ -136,21 +151,6 @@ components:
                         id:
                           type: string
                           description: Unique identifier for the price
-    CheckoutSessionCompletedRequest:
-      type: object
-      properties:
-        userId:
-          type: string
-          description: The ID of the user associated with the checkout session
-          example: userId-xxx
-        subscriptionId:
-          type: string
-          description: The ID of the subscription associated with the checkout session
-          example: subId-xxx
-        checkoutSessionId:
-          type: string
-          description: The unique identifier for the Stripe checkout session
-          example: checkoutSessionId-xxx
   securitySchemes:
     cognitoUserAuth:
       type: oauth2

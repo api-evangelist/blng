@@ -189,26 +189,6 @@ paths:
       x-operation-id-source: derived
 components:
   schemas:
-    Organization:
-      type: object
-      properties:
-        organizationId:
-          type: string
-          description: Unique identifier for the organization
-        name:
-          type: string
-          description: Name of the organization
-        stripeCustomerId:
-          type: string
-          description: Stripe customer ID
-        createdAt:
-          type: string
-          format: date-time
-          description: Timestamp of when the organization was created
-        updatedAt:
-          type: string
-          format: date-time
-          description: Timestamp of the last update to organization
     Subscription:
       type: object
       properties:
@@ -284,6 +264,26 @@ components:
           type: string
           format: date-time
           description: Timestamp of the last update to subscription
+    Organization:
+      type: object
+      properties:
+        organizationId:
+          type: string
+          description: Unique identifier for the organization
+        name:
+          type: string
+          description: Name of the organization
+        stripeCustomerId:
+          type: string
+          description: Stripe customer ID
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the organization was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last update to organization
     Entitlements:
       type: object
       properties:

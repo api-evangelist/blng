@@ -237,18 +237,6 @@ paths:
       x-operation-id-source: derived
 components:
   schemas:
-    CreateCustomerPortalRequest:
-      type: object
-      properties:
-        subscriptionId:
-          type: string
-          description: The ID of the subscription
-          example: subId-xxx
-        callbackUrl:
-          type: string
-          format: uri
-          description: URL to redirect the user after portal interaction
-          example: http://localhost:3000/dashboard
     Price:
       type: object
       properties:
@@ -290,6 +278,18 @@ components:
               format: uri
               description: URL to redirect if the checkout is cancelled
               example: http://localhost:3000/dashboard
+    CreateCustomerPortalRequest:
+      type: object
+      properties:
+        subscriptionId:
+          type: string
+          description: The ID of the subscription
+          example: subId-xxx
+        callbackUrl:
+          type: string
+          format: uri
+          description: URL to redirect the user after portal interaction
+          example: http://localhost:3000/dashboard
   securitySchemes:
     cognitoUserAuth:
       type: oauth2

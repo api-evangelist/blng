@@ -200,113 +200,34 @@ paths:
       x-operation-id-source: derived
 components:
   schemas:
-    User:
+    MarketingConsentReceipt:
       type: object
+      description: Marketing opt-in receipt (GDPR consent provenance). Present only for users who made an explicit choice; optIn records that choice either way. Synced to HubSpot as the marketing_opt_in contact property. Absent for users who have never been asked or who dismissed the prompt.
+      required:
+      - optIn
+      - timestamp
+      - wordingVersion
+      - captureLocation
       properties:
-        userId:
-          type: string
-          description: Unique identifier for the user
-        email:
-          type: string
-          description: Email of the user
-        firstName:
-          type: string
-          description: First name of the user
-        lastName:
-          type: string
-          description: Last name of the user
-        companyName:
-          type: string
-          description: Optional company name (app metadata, not auth)
-        profilePictureUrl:
-          type: string
-          description: Profile image URL (e.g. from federated IdP), synced on login
-        stripeCustomerId:
-          type: string
-          description: Stripe customer ID
-        createdAt:
-          type: string
-          format: date-time
-          description: Timestamp of when the user was created
-        updatedAt:
-          type: string
-          format: date-time
-          description: Timestamp of the last update to user
-        welcomeEmailSent:
+        optIn:
           type: boolean
-          description: Whether the welcome email has been sent
-          deprecated: true
-        welcomeEmailStatus:
-          type: string
-          enum:
-          - SENT
-          - NOT_SENT
-          - IN_PROGRESS
-          description: Status of the welcome email
-        tooltipFlowIdsViewed:
-          type: array
-          items:
-            type: string
-          description: Id of all tooltip flows marked as viewed
-        activeWorkspaceId:
-          type: string
-          format: uuid
-          description: Current workspace context (multi-tenancy); set via PUT /users/{userId}/active-workspace
-        allowedWorkspaces:
-          type: integer
-          minimum: 1
-          description: 'Ops-only override (DynamoDB): max workspaces this user may own via POST /users/{userId}/workspaces. Omitted on normal users; overrides the stage default (typically 3). Not settable via public PUT /users.'
-        marketingConsent:
-          $ref: '#/components/schemas/MarketingConsentReceipt'
-        marketingConsentPromptedAt:
+          description: The user's choice
+        timestamp:
           type: string
           format: date-time
-          description: Set when the one-time consent prompt was shown and closed without an answer. Suppresses further prompting without recording a choice the user never made. Mutually exclusive with marketingConsent. Set via PUT /users/{userId}/marketing-consent.
-        signUpPending:
-          type: boolean
+          description: When the choice was captured. Server-stamped; never accepted from the caller.
+        wordingVersion:
+          type: string
+          description: Version tag of the exact consent wording shown, so the receipt survives copy changes
+        captureLocation:
+          type: string
+          description: Which surface captured the choice. `email-unsubscribe` and `email-spam-complaint` are withdrawals the recipient made against mail we sent, the first through an unsubscribe link and the second by reporting it to their provider. Both are recorded from the CRM's own subscription-change events rather than through this API.
           enum:
-          - true
-          description: Present only while an account is still going through sign-up and has not resolved the marketing consent ask. Written by account creation, cleared by the first consent write, and absent on every row created before it was introduced. Not settable via any API.
-    UserSubscriptionListItem:
-      allOf:
-      - $ref: '#/components/schemas/Subscription'
-      - type: object
-        properties:
-          roles:
-            type: array
-            description: User roles on this subscription (legacy model compatibility)
-            items:
-              type: string
-              enum:
-              - OWNER
-              - BILLING_ADMIN
-              - ADMIN
-              - EDITOR
-              - VIEWER
-          workspaceId:
-            type: string
-            format: uuid
-            description: Linked workspace id (workspace model compatibility)
-    UserSubscriptionView:
-      allOf:
-      - $ref: '#/components/schemas/Subscription'
-      - type: object
-        properties:
-          roles:
-            type: array
-            description: User roles on this subscription (legacy model compatibility)
-            items:
-              type: string
-              enum:
-              - OWNER
-              - BILLING_ADMIN
-              - ADMIN
-              - EDITOR
-              - VIEWER
-          workspaceId:
-            type: string
-            format: uuid
-            description: Linked workspace id (workspace model compatibility)
+          - signup
+          - first-login-prompt
+          - settings
+          - email-unsubscribe
+          - email-spam-complaint
     Subscription:
       type: object
       properties:
@@ -382,6 +303,93 @@ components:
           type: string
           format: date-time
           description: Timestamp of the last update to subscription
+    User:
+      type: object
+      properties:
+        userId:
+          type: string
+          description: Unique identifier for the user
+        email:
+          type: string
+          description: Email of the user
+        firstName:
+          type: string
+          description: First name of the user
+        lastName:
+          type: string
+          description: Last name of the user
+        companyName:
+          type: string
+          description: Optional company name (app metadata, not auth)
+        profilePictureUrl:
+          type: string
+          description: Profile image URL (e.g. from federated IdP), synced on login
+        stripeCustomerId:
+          type: string
+          description: Stripe customer ID
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the user was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last update to user
+        welcomeEmailSent:
+          type: boolean
+          description: Whether the welcome email has been sent
+          deprecated: true
+        welcomeEmailStatus:
+          type: string
+          enum:
+          - SENT
+          - NOT_SENT
+          - IN_PROGRESS
+          description: Status of the welcome email
+        tooltipFlowIdsViewed:
+          type: array
+          items:
+            type: string
+          description: Id of all tooltip flows marked as viewed
+        activeWorkspaceId:
+          type: string
+          format: uuid
+          description: Current workspace context (multi-tenancy); set via PUT /users/{userId}/active-workspace
+        allowedWorkspaces:
+          type: integer
+          minimum: 1
+          description: 'Ops-only override (DynamoDB): max workspaces this user may own via POST /users/{userId}/workspaces. Omitted on normal users; overrides the stage default (typically 3). Not settable via public PUT /users.'
+        marketingConsent:
+          $ref: '#/components/schemas/MarketingConsentReceipt'
+        marketingConsentPromptedAt:
+          type: string
+          format: date-time
+          description: Set when the one-time consent prompt was shown and closed without an answer. Suppresses further prompting without recording a choice the user never made. Mutually exclusive with marketingConsent. Set via PUT /users/{userId}/marketing-consent.
+        signUpPending:
+          type: boolean
+          enum:
+          - true
+          description: Present only while an account is still going through sign-up and has not resolved the marketing consent ask. Written by account creation, cleared by the first consent write, and absent on every row created before it was introduced. Not settable via any API.
+    UserSubscriptionView:
+      allOf:
+      - $ref: '#/components/schemas/Subscription'
+      - type: object
+        properties:
+          roles:
+            type: array
+            description: User roles on this subscription (legacy model compatibility)
+            items:
+              type: string
+              enum:
+              - OWNER
+              - BILLING_ADMIN
+              - ADMIN
+              - EDITOR
+              - VIEWER
+          workspaceId:
+            type: string
+            format: uuid
+            description: Linked workspace id (workspace model compatibility)
     Entitlements:
       type: object
       properties:
@@ -391,34 +399,26 @@ components:
         chatVisibilityWindowHrs:
           type: integer
           description: Maximum number of hours to let a user look back in chat history. -1 for unlimited.
-    MarketingConsentReceipt:
-      type: object
-      description: Marketing opt-in receipt (GDPR consent provenance). Present only for users who made an explicit choice; optIn records that choice either way. Synced to HubSpot as the marketing_opt_in contact property. Absent for users who have never been asked or who dismissed the prompt.
-      required:
-      - optIn
-      - timestamp
-      - wordingVersion
-      - captureLocation
-      properties:
-        optIn:
-          type: boolean
-          description: The user's choice
-        timestamp:
-          type: string
-          format: date-time
-          description: When the choice was captured. Server-stamped; never accepted from the caller.
-        wordingVersion:
-          type: string
-          description: Version tag of the exact consent wording shown, so the receipt survives copy changes
-        captureLocation:
-          type: string
-          description: Which surface captured the choice. `email-unsubscribe` and `email-spam-complaint` are withdrawals the recipient made against mail we sent, the first through an unsubscribe link and the second by reporting it to their provider. Both are recorded from the CRM's own subscription-change events rather than through this API.
-          enum:
-          - signup
-          - first-login-prompt
-          - settings
-          - email-unsubscribe
-          - email-spam-complaint
+    UserSubscriptionListItem:
+      allOf:
+      - $ref: '#/components/schemas/Subscription'
+      - type: object
+        properties:
+          roles:
+            type: array
+            description: User roles on this subscription (legacy model compatibility)
+            items:
+              type: string
+              enum:
+              - OWNER
+              - BILLING_ADMIN
+              - ADMIN
+              - EDITOR
+              - VIEWER
+          workspaceId:
+            type: string
+            format: uuid
+            description: Linked workspace id (workspace model compatibility)
   securitySchemes:
     cognitoUserAuth:
       type: oauth2

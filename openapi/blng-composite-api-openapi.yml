@@ -127,6 +127,35 @@ paths:
       x-operation-id-source: derived
 components:
   schemas:
+    Entitlements:
+      type: object
+      properties:
+        maxJourneys:
+          type: integer
+          description: Maximum number of journeys allowed on a subscription. -1 for unlimited.
+        chatVisibilityWindowHrs:
+          type: integer
+          description: Maximum number of hours to let a user look back in chat history. -1 for unlimited.
+    Organization:
+      type: object
+      properties:
+        organizationId:
+          type: string
+          description: Unique identifier for the organization
+        name:
+          type: string
+          description: Name of the organization
+        stripeCustomerId:
+          type: string
+          description: Stripe customer ID
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the organization was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last update to organization
     MarketingConsentReceipt:
       type: object
       description: Marketing opt-in receipt (GDPR consent provenance). Present only for users who made an explicit choice; optIn records that choice either way. Synced to HubSpot as the marketing_opt_in contact property. Absent for users who have never been asked or who dismissed the prompt.
@@ -297,35 +326,6 @@ components:
           type: string
           format: date-time
           description: Timestamp of the last update to subscription
-    Entitlements:
-      type: object
-      properties:
-        maxJourneys:
-          type: integer
-          description: Maximum number of journeys allowed on a subscription. -1 for unlimited.
-        chatVisibilityWindowHrs:
-          type: integer
-          description: Maximum number of hours to let a user look back in chat history. -1 for unlimited.
-    Organization:
-      type: object
-      properties:
-        organizationId:
-          type: string
-          description: Unique identifier for the organization
-        name:
-          type: string
-          description: Name of the organization
-        stripeCustomerId:
-          type: string
-          description: Stripe customer ID
-        createdAt:
-          type: string
-          format: date-time
-          description: Timestamp of when the organization was created
-        updatedAt:
-          type: string
-          format: date-time
-          description: Timestamp of the last update to organization
   securitySchemes:
     cognitoUserAuth:
       type: oauth2

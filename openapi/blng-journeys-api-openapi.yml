@@ -412,6 +412,34 @@ paths:
       - cognitoUserAuth: []
 components:
   schemas:
+    Vector3:
+      type: object
+      properties:
+        x:
+          type: number
+        y:
+          type: number
+        z:
+          type: number
+      required:
+      - x
+      - y
+      - z
+    LayerModel3D:
+      type: object
+      required:
+      - modelId
+      - transform
+      properties:
+        modelId:
+          type: string
+          description: References a Model3D entity in this journey.
+        resolvedAssetId:
+          type: string
+          readOnly: true
+          description: Server-populated convenience pointer to the concrete asset currently used for this client/platform.
+        transform:
+          $ref: '#/components/schemas/Transform3D'
     LegacyLayer:
       type: object
       deprecated: true
@@ -451,6 +479,161 @@ components:
           deprecated: true
       required:
       - name
+    ImageLayer:
+      type: object
+      required:
+      - layerType
+      - name
+      - visible
+      - locked
+      - opacity
+      - image
+      properties:
+        layerType:
+          type: string
+          enum:
+          - image
+          description: Discriminator indicating an image (2D) layer.
+        name:
+          type: string
+          description: Name of the layer
+        image:
+          $ref: '#/components/schemas/LayerImage'
+        visible:
+          type: boolean
+        locked:
+          type: boolean
+        blendMode:
+          type: string
+          description: Blending mode for compositing this layer in 2D.
+        opacity:
+          type: number
+        width:
+          type: number
+        height:
+          type: number
+        originScale:
+          type: string
+          enum:
+          - 1x
+          - 2x
+          - 3x
+          - upscale4x
+          - external
+          description: Deprecated legacy field preserved for compatibility.
+          deprecated: true
+    Color:
+      type: object
+      properties:
+        red:
+          type: integer
+          description: Red component of the color (0-255)
+        green:
+          type: integer
+          description: Green component of the color (0-255)
+        blue:
+          type: integer
+          description: Blue component of the color (0-255)
+        alpha:
+          type: number
+          format: float
+          description: Alpha component of the color (0.0-1.0)
+    JourneySpecifics:
+      type: object
+      properties:
+        height:
+          type: number
+        historicImages:
+          type: array
+          deprecated: true
+          description: List of image IDs that were generated from prompts, this property is deprecated and will be removed in the future
+          items:
+            type: string
+        layers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Layer'
+        name:
+          type: string
+        preview:
+          type: string
+        lastGenerateImageId:
+          description: asset ID of the last generated image from a chat prompt, updated when a chat prompt result is processed
+          type: string
+        visibleCanvasImageId:
+          description: asset ID of what the current canvas looks like (also called flattened), updated by clients when saving a layer
+          type: string
+        sceneImageId:
+          description: asset ID of the image used as the scene style in the app
+          type: string
+        width:
+          type: number
+        backgroundColor:
+          $ref: '#/components/schemas/Color'
+        references:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssetReference'
+    ModelLayer:
+      type: object
+      required:
+      - layerType
+      - name
+      - visible
+      - locked
+      - opacity
+      - model
+      properties:
+        layerType:
+          type: string
+          enum:
+          - model
+          description: Discriminator indicating a 3D model layer.
+        name:
+          type: string
+        blendMode:
+          type: string
+        model:
+          $ref: '#/components/schemas/LayerModel3D'
+        visible:
+          type: boolean
+        locked:
+          type: boolean
+        opacity:
+          type: number
+    Transform3D:
+      type: object
+      properties:
+        position:
+          $ref: '#/components/schemas/Vector3'
+        orientation:
+          $ref: '#/components/schemas/Quaternion'
+        scale:
+          $ref: '#/components/schemas/Vector3'
+      required:
+      - position
+      - rotationDegrees
+      - scale
+    AssetReference:
+      type: object
+      properties:
+        assetId:
+          type: string
+        type:
+          type: string
+          description: Type of the asset reference.
+          enum:
+          - canvas
+          - asset
+        influence:
+          type: number
+          minimum: 0
+          maximum: 1
+        intent:
+          type: array
+          description: Per-image guidance from the reference context menu — aspect chips (e.g. texture, color) and/or free text describing how this image should influence the generation. Passed through to the design pipeline verbatim; sanitized there.
+          items:
+            type: string
     Quaternion:
       type: object
       properties:
@@ -495,76 +678,16 @@ components:
           deprecated: true
         specifics:
           $ref: '#/components/schemas/JourneySpecifics'
-    ModelLayer:
-      type: object
-      required:
-      - layerType
-      - name
-      - visible
-      - locked
-      - opacity
-      - model
-      properties:
-        layerType:
-          type: string
-          enum:
-          - model
-          description: Discriminator indicating a 3D model layer.
-        name:
-          type: string
-        blendMode:
-          type: string
-        model:
-          $ref: '#/components/schemas/LayerModel3D'
-        visible:
-          type: boolean
-        locked:
-          type: boolean
-        opacity:
-          type: number
-    ImageLayer:
-      type: object
-      required:
-      - layerType
-      - name
-      - visible
-      - locked
-      - opacity
-      - image
-      properties:
-        layerType:
-          type: string
-          enum:
-          - image
-          description: Discriminator indicating an image (2D) layer.
-        name:
-          type: string
-          description: Name of the layer
-        image:
-          $ref: '#/components/schemas/LayerImage'
-        visible:
-          type: boolean
-        locked:
-          type: boolean
-        blendMode:
-          type: string
-          description: Blending mode for compositing this layer in 2D.
-        opacity:
-          type: number
-        width:
-          type: number
-        height:
-          type: number
-        originScale:
-          type: string
-          enum:
-          - 1x
-          - 2x
-          - 3x
-          - upscale4x
-          - external
-          description: Deprecated legacy field preserved for compatibility.
-          deprecated: true
+    Layer:
+      oneOf:
+      - $ref: '#/components/schemas/ImageLayer'
+      - $ref: '#/components/schemas/ModelLayer'
+      - $ref: '#/components/schemas/LegacyLayer'
+      discriminator:
+        propertyName: layerType
+        mapping:
+          image: '#/components/schemas/ImageLayer'
+          model: '#/components/schemas/ModelLayer'
     LayerImage:
       type: object
       properties:
@@ -583,129 +706,6 @@ components:
         left:
           type: number
           description: Leftmost X coordinate of the image
-    Color:
-      type: object
-      properties:
-        red:
-          type: integer
-          description: Red component of the color (0-255)
-        green:
-          type: integer
-          description: Green component of the color (0-255)
-        blue:
-          type: integer
-          description: Blue component of the color (0-255)
-        alpha:
-          type: number
-          format: float
-          description: Alpha component of the color (0.0-1.0)
-    Vector3:
-      type: object
-      properties:
-        x:
-          type: number
-        y:
-          type: number
-        z:
-          type: number
-      required:
-      - x
-      - y
-      - z
-    AssetReference:
-      type: object
-      properties:
-        assetId:
-          type: string
-        type:
-          type: string
-          description: Type of the asset reference.
-          enum:
-          - canvas
-          - asset
-        influence:
-          type: number
-          minimum: 0
-          maximum: 1
-        intent:
-          type: array
-          description: Per-image guidance from the reference context menu — aspect chips (e.g. texture, color) and/or free text describing how this image should influence the generation. Passed through to the design pipeline verbatim; sanitized there.
-          items:
-            type: string
-    JourneySpecifics:
-      type: object
-      properties:
-        height:
-          type: number
-        historicImages:
-          type: array
-          deprecated: true
-          description: List of image IDs that were generated from prompts, this property is deprecated and will be removed in the future
-          items:
-            type: string
-        layers:
-          type: array
-          items:
-            $ref: '#/components/schemas/Layer'
-        name:
-          type: string
-        preview:
-          type: string
-        lastGenerateImageId:
-          description: asset ID of the last generated image from a chat prompt, updated when a chat prompt result is processed
-          type: string
-        visibleCanvasImageId:
-          description: asset ID of what the current canvas looks like (also called flattened), updated by clients when saving a layer
-          type: string
-        sceneImageId:
-          description: asset ID of the image used as the scene style in the app
-          type: string
-        width:
-          type: number
-        backgroundColor:
-          $ref: '#/components/schemas/Color'
-        references:
-          type: array
-          items:
-            $ref: '#/components/schemas/AssetReference'
-    LayerModel3D:
-      type: object
-      required:
-      - modelId
-      - transform
-      properties:
-        modelId:
-          type: string
-          description: References a Model3D entity in this journey.
-        resolvedAssetId:
-          type: string
-          readOnly: true
-          description: Server-populated convenience pointer to the concrete asset currently used for this client/platform.
-        transform:
-          $ref: '#/components/schemas/Transform3D'
-    Layer:
-      oneOf:
-      - $ref: '#/components/schemas/ImageLayer'
-      - $ref: '#/components/schemas/ModelLayer'
-      - $ref: '#/components/schemas/LegacyLayer'
-      discriminator:
-        propertyName: layerType
-        mapping:
-          image: '#/components/schemas/ImageLayer'
-          model: '#/components/schemas/ModelLayer'
-    Transform3D:
-      type: object
-      properties:
-        position:
-          $ref: '#/components/schemas/Vector3'
-        orientation:
-          $ref: '#/components/schemas/Quaternion'
-        scale:
-          $ref: '#/components/schemas/Vector3'
-      required:
-      - position
-      - rotationDegrees
-      - scale
   securitySchemes:
     bearerAuth:
       type: http

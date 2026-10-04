@@ -1007,11 +1007,17 @@ paths:
       x-operation-id-source: derived
 components:
   schemas:
-    ErrorResponse:
+    SetActiveWorkspaceRequest:
       type: object
+      required:
+      - activeWorkspaceId
       properties:
-        message:
-          type: string
+        activeWorkspaceId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: Workspace to activate for the user; null clears active workspace.
     WorkspaceIntegrityReport:
       type: object
       required:
@@ -1035,6 +1041,123 @@ components:
         subscriptionIdOnWorkspace:
           type: string
           description: Present when the workspace row exists and has subscriptionId set
+    CreateWorkspaceRequest:
+      type: object
+      required:
+      - name
+      - type
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          description: Display name for the new workspace
+        type:
+          type: string
+          enum:
+          - team
+          - enterprise
+          - enterprise-team
+        parentWorkspaceId:
+          type: string
+          format: uuid
+          description: Required when type is enterprise-team; must be an enterprise workspace the user administers
+    WorkspaceInvitationPublic:
+      type: object
+      required:
+      - workspaceInvitationId
+      - workspaceId
+      - emailMasked
+      - inviteTarget
+      - status
+      - role
+      properties:
+        workspaceInvitationId:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+        emailMasked:
+          type: string
+          description: Redacted invitee email for display; use GET .../email-match when authenticated to verify the signed-in account
+        inviteTarget:
+          type: string
+          enum:
+          - new_user
+          - existing_user
+        status:
+          type: string
+          enum:
+          - PENDING
+          - ACCEPTED
+          - REJECTED
+        role:
+          type: string
+    UpdateMembershipRoleRequest:
+      type: object
+      required:
+      - role
+      properties:
+        role:
+          type: string
+          enum:
+          - OWNER
+          - BILLING_ADMIN
+          - ADMIN
+          - EDITOR
+          - VIEWER
+    WorkspaceInvitationCreated:
+      type: object
+      required:
+      - workspaceInvitationId
+      - workspaceId
+      - email
+      - inviteTarget
+      - role
+      - status
+      - createdAt
+      properties:
+        workspaceInvitationId:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+        email:
+          type: string
+        inviteTarget:
+          type: string
+          enum:
+          - new_user
+          - existing_user
+        role:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        emailSent:
+          type: boolean
+          description: Whether the invite email was sent via SES (false if EMAIL_API/origin missing or send failed)
+        inviteUrl:
+          type: string
+          format: uri
+          description: Canonical accept link (DESIGN_APP_WEB_ORIGIN + /workspace-invite/{id}); present when origin is configured so clients need not use window.location
+    WorkspaceMembersList:
+      type: object
+      required:
+      - members
+      description: Paginated list from GET .../workspaces/{workspaceId}/members
+      properties:
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceMembership'
+        nextToken:
+          type: string
+          description: Present when more pages exist; pass as the nextToken query parameter
     UpdateWorkspaceRequest:
       type: object
       required:
@@ -1045,71 +1168,6 @@ components:
           minLength: 1
           maxLength: 120
           description: Workspace display name
-    UserWorkspaceSwitcherItem:
-      type: object
-      description: Per-membership workspace summary for the UI switcher. Returned by GET /users/{userId}/workspaces. Hydrated fields (name, type, etc.) may be omitted if the workspace row is missing.
-      required:
-      - workspaceId
-      - role
-      properties:
-        workspaceId:
-          type: string
-          format: uuid
-        role:
-          type: string
-          enum:
-          - OWNER
-          - BILLING_ADMIN
-          - ADMIN
-          - EDITOR
-          - VIEWER
-        memberType:
-          type: string
-          enum:
-          - sso_employee
-          - external
-          - federated_b2b2c
-        federatedIdpId:
-          type: string
-        name:
-          type: string
-          description: Workspace display name when the workspace record was found
-        type:
-          type: string
-          enum:
-          - starter
-          - pro
-          - team
-          - enterprise
-          - beta
-          - enterprise-team
-        subscriptionId:
-          type: string
-          format: uuid
-        subscriptionType:
-          type: string
-          description: Billing tier of the workspace's subscription, so the client can reflect the active workspace's plan.
-          enum:
-          - starter
-          - pro
-          - team
-          - enterprise
-          - beta
-        status:
-          type: string
-          description: Status of the workspace's subscription. Maps to stripe status.
-          enum:
-          - active
-          - canceled
-          - incomplete
-          - incomplete_expired
-          - paused
-          - past_due
-          - trialing
-          - unpaid
-        parentWorkspaceId:
-          type: string
-          format: uuid
     MarketingConsentReceipt:
       type: object
       description: Marketing opt-in receipt (GDPR consent provenance). Present only for users who made an explicit choice; optIn records that choice either way. Synced to HubSpot as the marketing_opt_in contact property. Absent for users who have never been asked or who dismissed the prompt.
@@ -1205,17 +1263,6 @@ components:
           enum:
           - true
           description: Present only while an account is still going through sign-up and has not resolved the marketing consent ask. Written by account creation, cleared by the first consent write, and absent on every row created before it was introduced. Not settable via any API.
-    SetActiveWorkspaceRequest:
-      type: object
-      required:
-      - activeWorkspaceId
-      properties:
-        activeWorkspaceId:
-          type:
-          - string
-          - 'null'
-          format: uuid
-          description: Workspace to activate for the user; null clears active workspace.
     CreateWorkspaceInvitationRequest:
       type: object
       required:
@@ -1233,159 +1280,10 @@ components:
           - ADMIN
           - EDITOR
           - VIEWER
-    CreateWorkspaceRequest:
+    ErrorResponse:
       type: object
-      required:
-      - name
-      - type
       properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 120
-          description: Display name for the new workspace
-        type:
-          type: string
-          enum:
-          - team
-          - enterprise
-          - enterprise-team
-        parentWorkspaceId:
-          type: string
-          format: uuid
-          description: Required when type is enterprise-team; must be an enterprise workspace the user administers
-    WorkspaceInvitationPublic:
-      type: object
-      required:
-      - workspaceInvitationId
-      - workspaceId
-      - emailMasked
-      - inviteTarget
-      - status
-      - role
-      properties:
-        workspaceInvitationId:
-          type: string
-          format: uuid
-        workspaceId:
-          type: string
-          format: uuid
-        emailMasked:
-          type: string
-          description: Redacted invitee email for display; use GET .../email-match when authenticated to verify the signed-in account
-        inviteTarget:
-          type: string
-          enum:
-          - new_user
-          - existing_user
-        status:
-          type: string
-          enum:
-          - PENDING
-          - ACCEPTED
-          - REJECTED
-        role:
-          type: string
-    WorkspaceInvitationCreated:
-      type: object
-      required:
-      - workspaceInvitationId
-      - workspaceId
-      - email
-      - inviteTarget
-      - role
-      - status
-      - createdAt
-      properties:
-        workspaceInvitationId:
-          type: string
-          format: uuid
-        workspaceId:
-          type: string
-          format: uuid
-        email:
-          type: string
-        inviteTarget:
-          type: string
-          enum:
-          - new_user
-          - existing_user
-        role:
-          type: string
-        status:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-        emailSent:
-          type: boolean
-          description: Whether the invite email was sent via SES (false if EMAIL_API/origin missing or send failed)
-        inviteUrl:
-          type: string
-          format: uri
-          description: Canonical accept link (DESIGN_APP_WEB_ORIGIN + /workspace-invite/{id}); present when origin is configured so clients need not use window.location
-    UpdateMembershipRoleRequest:
-      type: object
-      required:
-      - role
-      properties:
-        role:
-          type: string
-          enum:
-          - OWNER
-          - BILLING_ADMIN
-          - ADMIN
-          - EDITOR
-          - VIEWER
-    WorkspaceMembersList:
-      type: object
-      required:
-      - members
-      description: Paginated list from GET .../workspaces/{workspaceId}/members
-      properties:
-        members:
-          type: array
-          items:
-            $ref: '#/components/schemas/WorkspaceMembership'
-        nextToken:
-          type: string
-          description: Present when more pages exist; pass as the nextToken query parameter
-    WorkspacePendingInvitationAdmin:
-      type: object
-      required:
-      - workspaceInvitationId
-      - workspaceId
-      - email
-      - role
-      - status
-      - inviteTarget
-      - createdAt
-      - updatedAt
-      properties:
-        workspaceInvitationId:
-          type: string
-          format: uuid
-        workspaceId:
-          type: string
-          format: uuid
-        email:
-          type: string
-        role:
-          type: string
-        status:
-          type: string
-          enum:
-          - PENDING
-          - ACCEPTED
-          - REJECTED
-        inviteTarget:
-          type: string
-          enum:
-          - new_user
-          - existing_user
-        createdAt:
-          type: string
-        updatedAt:
+        message:
           type: string
     WorkspaceMembership:
       type: object
@@ -1432,6 +1330,108 @@ components:
         displayName:
           type: string
           description: Optional; derived from user first/last name when available
+    WorkspacePendingInvitationAdmin:
+      type: object
+      required:
+      - workspaceInvitationId
+      - workspaceId
+      - email
+      - role
+      - status
+      - inviteTarget
+      - createdAt
+      - updatedAt
+      properties:
+        workspaceInvitationId:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+        email:
+          type: string
+        role:
+          type: string
+        status:
+          type: string
+          enum:
+          - PENDING
+          - ACCEPTED
+          - REJECTED
+        inviteTarget:
+          type: string
+          enum:
+          - new_user
+          - existing_user
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+    UserWorkspaceSwitcherItem:
+      type: object
+      description: Per-membership workspace summary for the UI switcher. Returned by GET /users/{userId}/workspaces. Hydrated fields (name, type, etc.) may be omitted if the workspace row is missing.
+      required:
+      - workspaceId
+      - role
+      properties:
+        workspaceId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum:
+          - OWNER
+          - BILLING_ADMIN
+          - ADMIN
+          - EDITOR
+          - VIEWER
+        memberType:
+          type: string
+          enum:
+          - sso_employee
+          - external
+          - federated_b2b2c
+        federatedIdpId:
+          type: string
+        name:
+          type: string
+          description: Workspace display name when the workspace record was found
+        type:
+          type: string
+          enum:
+          - starter
+          - pro
+          - team
+          - enterprise
+          - beta
+          - enterprise-team
+        subscriptionId:
+          type: string
+          format: uuid
+        subscriptionType:
+          type: string
+          description: Billing tier of the workspace's subscription, so the client can reflect the active workspace's plan.
+          enum:
+          - starter
+          - pro
+          - team
+          - enterprise
+          - beta
+        status:
+          type: string
+          description: Status of the workspace's subscription. Maps to stripe status.
+          enum:
+          - active
+          - canceled
+          - incomplete
+          - incomplete_expired
+          - paused
+          - past_due
+          - trialing
+          - unpaid
+        parentWorkspaceId:
+          type: string
+          format: uuid
   securitySchemes:
     cognitoUserAuth:
       type: oauth2

@@ -200,6 +200,26 @@ paths:
       x-operation-id-source: derived
 components:
   schemas:
+    UserSubscriptionView:
+      allOf:
+      - $ref: '#/components/schemas/Subscription'
+      - type: object
+        properties:
+          roles:
+            type: array
+            description: User roles on this subscription (legacy model compatibility)
+            items:
+              type: string
+              enum:
+              - OWNER
+              - BILLING_ADMIN
+              - ADMIN
+              - EDITOR
+              - VIEWER
+          workspaceId:
+            type: string
+            format: uuid
+            description: Linked workspace id (workspace model compatibility)
     UserSubscriptionListItem:
       allOf:
       - $ref: '#/components/schemas/Subscription'
@@ -229,26 +249,81 @@ components:
         chatVisibilityWindowHrs:
           type: integer
           description: Maximum number of hours to let a user look back in chat history. -1 for unlimited.
-    UserSubscriptionView:
-      allOf:
-      - $ref: '#/components/schemas/Subscription'
-      - type: object
-        properties:
-          roles:
-            type: array
-            description: User roles on this subscription (legacy model compatibility)
-            items:
-              type: string
-              enum:
-              - OWNER
-              - BILLING_ADMIN
-              - ADMIN
-              - EDITOR
-              - VIEWER
-          workspaceId:
-            type: string
-            format: uuid
-            description: Linked workspace id (workspace model compatibility)
+    Subscription:
+      type: object
+      properties:
+        subscriptionId:
+          type: string
+          description: Unique identifier for the subscription
+        name:
+          type: string
+          description: Human-friendly subscription name
+        ownerId:
+          type: string
+          description: id of owner of the subscription
+        ownerType:
+          type: string
+          enum:
+          - user
+          - organization
+          description: Type of owner of the subscription
+        subscriptionType:
+          type: string
+          enum:
+          - starter
+          - pro
+          - team
+          - enterprise
+          - beta
+          description: Type of subscription
+        stripeSubscriptionId:
+          type: string
+          description: Stripe subscription ID
+        stripeCustomerId:
+          type: string
+          description: Stripe customer ID associated with owner
+        seatsPurchased:
+          type: integer
+          description: Number of seats purchased
+        paymentSource:
+          type: string
+          enum:
+          - stripe
+          - apple
+          description: Payment source for subscription. Always stripe for now.
+        status:
+          type: string
+          enum:
+          - active
+          - canceled
+          - incomplete
+          - incomplete_expired
+          - paused
+          - past_due
+          - trialing
+          - unpaid
+          description: Status of subscription. Maps to stripe status.
+        cancelAtPeriodEnd:
+          type: boolean
+          description: Whether the subscription will be canceled at the end of the current period
+        currentPeriodEnd:
+          type: string
+          format: date-time
+          description: Timestamp of when the current period ends
+        canceledAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the subscription was canceled
+        entitlements:
+          $ref: '#/components/schemas/Entitlements'
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the subscription was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last update to subscription
     MarketingConsentReceipt:
       type: object
       description: Marketing opt-in receipt (GDPR consent provenance). Present only for users who made an explicit choice; optIn records that choice either way. Synced to HubSpot as the marketing_opt_in contact property. Absent for users who have never been asked or who dismissed the prompt.
@@ -344,81 +419,6 @@ components:
           enum:
           - true
           description: Present only while an account is still going through sign-up and has not resolved the marketing consent ask. Written by account creation, cleared by the first consent write, and absent on every row created before it was introduced. Not settable via any API.
-    Subscription:
-      type: object
-      properties:
-        subscriptionId:
-          type: string
-          description: Unique identifier for the subscription
-        name:
-          type: string
-          description: Human-friendly subscription name
-        ownerId:
-          type: string
-          description: id of owner of the subscription
-        ownerType:
-          type: string
-          enum:
-          - user
-          - organization
-          description: Type of owner of the subscription
-        subscriptionType:
-          type: string
-          enum:
-          - starter
-          - pro
-          - team
-          - enterprise
-          - beta
-          description: Type of subscription
-        stripeSubscriptionId:
-          type: string
-          description: Stripe subscription ID
-        stripeCustomerId:
-          type: string
-          description: Stripe customer ID associated with owner
-        seatsPurchased:
-          type: integer
-          description: Number of seats purchased
-        paymentSource:
-          type: string
-          enum:
-          - stripe
-          - apple
-          description: Payment source for subscription. Always stripe for now.
-        status:
-          type: string
-          enum:
-          - active
-          - canceled
-          - incomplete
-          - incomplete_expired
-          - paused
-          - past_due
-          - trialing
-          - unpaid
-          description: Status of subscription. Maps to stripe status.
-        cancelAtPeriodEnd:
-          type: boolean
-          description: Whether the subscription will be canceled at the end of the current period
-        currentPeriodEnd:
-          type: string
-          format: date-time
-          description: Timestamp of when the current period ends
-        canceledAt:
-          type: string
-          format: date-time
-          description: Timestamp of when the subscription was canceled
-        entitlements:
-          $ref: '#/components/schemas/Entitlements'
-        createdAt:
-          type: string
-          format: date-time
-          description: Timestamp of when the subscription was created
-        updatedAt:
-          type: string
-          format: date-time
-          description: Timestamp of the last update to subscription
   securitySchemes:
     cognitoUserAuth:
       type: oauth2

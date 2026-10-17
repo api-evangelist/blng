@@ -136,26 +136,81 @@ components:
         chatVisibilityWindowHrs:
           type: integer
           description: Maximum number of hours to let a user look back in chat history. -1 for unlimited.
-    Organization:
+    Subscription:
       type: object
       properties:
-        organizationId:
+        subscriptionId:
           type: string
-          description: Unique identifier for the organization
+          description: Unique identifier for the subscription
         name:
           type: string
-          description: Name of the organization
+          description: Human-friendly subscription name
+        ownerId:
+          type: string
+          description: id of owner of the subscription
+        ownerType:
+          type: string
+          enum:
+          - user
+          - organization
+          description: Type of owner of the subscription
+        subscriptionType:
+          type: string
+          enum:
+          - starter
+          - pro
+          - team
+          - enterprise
+          - beta
+          description: Type of subscription
+        stripeSubscriptionId:
+          type: string
+          description: Stripe subscription ID
         stripeCustomerId:
           type: string
-          description: Stripe customer ID
+          description: Stripe customer ID associated with owner
+        seatsPurchased:
+          type: integer
+          description: Number of seats purchased
+        paymentSource:
+          type: string
+          enum:
+          - stripe
+          - apple
+          description: Payment source for subscription. Always stripe for now.
+        status:
+          type: string
+          enum:
+          - active
+          - canceled
+          - incomplete
+          - incomplete_expired
+          - paused
+          - past_due
+          - trialing
+          - unpaid
+          description: Status of subscription. Maps to stripe status.
+        cancelAtPeriodEnd:
+          type: boolean
+          description: Whether the subscription will be canceled at the end of the current period
+        currentPeriodEnd:
+          type: string
+          format: date-time
+          description: Timestamp of when the current period ends
+        canceledAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the subscription was canceled
+        entitlements:
+          $ref: '#/components/schemas/Entitlements'
         createdAt:
           type: string
           format: date-time
-          description: Timestamp of when the organization was created
+          description: Timestamp of when the subscription was created
         updatedAt:
           type: string
           format: date-time
-          description: Timestamp of the last update to organization
+          description: Timestamp of the last update to subscription
     MarketingConsentReceipt:
       type: object
       description: Marketing opt-in receipt (GDPR consent provenance). Present only for users who made an explicit choice; optIn records that choice either way. Synced to HubSpot as the marketing_opt_in contact property. Absent for users who have never been asked or who dismissed the prompt.
@@ -251,81 +306,26 @@ components:
           enum:
           - true
           description: Present only while an account is still going through sign-up and has not resolved the marketing consent ask. Written by account creation, cleared by the first consent write, and absent on every row created before it was introduced. Not settable via any API.
-    Subscription:
+    Organization:
       type: object
       properties:
-        subscriptionId:
+        organizationId:
           type: string
-          description: Unique identifier for the subscription
+          description: Unique identifier for the organization
         name:
           type: string
-          description: Human-friendly subscription name
-        ownerId:
-          type: string
-          description: id of owner of the subscription
-        ownerType:
-          type: string
-          enum:
-          - user
-          - organization
-          description: Type of owner of the subscription
-        subscriptionType:
-          type: string
-          enum:
-          - starter
-          - pro
-          - team
-          - enterprise
-          - beta
-          description: Type of subscription
-        stripeSubscriptionId:
-          type: string
-          description: Stripe subscription ID
+          description: Name of the organization
         stripeCustomerId:
           type: string
-          description: Stripe customer ID associated with owner
-        seatsPurchased:
-          type: integer
-          description: Number of seats purchased
-        paymentSource:
-          type: string
-          enum:
-          - stripe
-          - apple
-          description: Payment source for subscription. Always stripe for now.
-        status:
-          type: string
-          enum:
-          - active
-          - canceled
-          - incomplete
-          - incomplete_expired
-          - paused
-          - past_due
-          - trialing
-          - unpaid
-          description: Status of subscription. Maps to stripe status.
-        cancelAtPeriodEnd:
-          type: boolean
-          description: Whether the subscription will be canceled at the end of the current period
-        currentPeriodEnd:
-          type: string
-          format: date-time
-          description: Timestamp of when the current period ends
-        canceledAt:
-          type: string
-          format: date-time
-          description: Timestamp of when the subscription was canceled
-        entitlements:
-          $ref: '#/components/schemas/Entitlements'
+          description: Stripe customer ID
         createdAt:
           type: string
           format: date-time
-          description: Timestamp of when the subscription was created
+          description: Timestamp of when the organization was created
         updatedAt:
           type: string
           format: date-time
-          description: Timestamp of the last update to subscription
+          description: Timestamp of the last update to organization
   securitySchemes:
     cognitoUserAuth:
       type: oauth2

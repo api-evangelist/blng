@@ -237,13 +237,6 @@ paths:
       x-operation-id-source: derived
 components:
   schemas:
-    Price:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Unique identifier for the price
-          example: price_12345
     CreateCheckoutSessionRequest:
       type: object
       properties:
@@ -290,6 +283,13 @@ components:
           format: uri
           description: URL to redirect the user after portal interaction
           example: http://localhost:3000/dashboard
+    Price:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the price
+          example: price_12345
   securitySchemes:
     cognitoUserAuth:
       type: oauth2

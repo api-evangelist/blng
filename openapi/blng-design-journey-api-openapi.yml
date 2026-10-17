@@ -831,81 +831,6 @@ paths:
       x-operation-id-source: derived
 components:
   schemas:
-    ImageOpsAcceptedResponse:
-      type: object
-      properties:
-        journeyId:
-          type: string
-        workflow:
-          $ref: '#/components/schemas/ImageOpsApiWorkflow'
-        source:
-          type: string
-          enum:
-          - Layer
-          - Prompt
-          - Legacy
-        layerId:
-          type: string
-        promptId:
-          type: string
-        planId:
-          type: string
-        sourceAssetId:
-          type: string
-        destinationAssetId:
-          type: string
-          format: uuid
-          description: Correlation id for async result handlers (matches submission).
-        expirationTime:
-          type: string
-          format: date-time
-    ImageOpsLegacyRequest:
-      allOf:
-      - $ref: '#/components/schemas/ImageOpsRequestBase'
-      - type: object
-        required:
-        - source
-        - promptId
-        - sourceAssetId
-        properties:
-          source:
-            type: string
-            enum:
-            - Legacy
-          promptId:
-            type: string
-            minLength: 1
-            description: 'design-v2 prompt. sourceAssetId must be one entry from response.generatedImageIds (required when the prompt has multiple generated images).
-
-              '
-          workflow:
-            type: string
-            enum:
-            - Upscale
-            - RemoveBackground
-          sourceAssetId:
-            type: string
-            minLength: 1
-            description: 'Asset id of the specific generated image to transform. When generatedImageIds has multiple entries, this must be the id of the image the user selected.
-
-              '
-          imageLocation:
-            description: Must be null or omitted; pixels are resolved from sourceAssetId only.
-          layerId:
-            type:
-            - string
-            - 'null'
-          planId:
-            type:
-            - string
-            - 'null'
-          stageId:
-            type:
-            - string
-            - 'null'
-        description: 'design-v2 chat prompt image ops (upscale / remove background). RegenerateImage is not supported. Completion is published as prompt.legacy.* on the event bus.
-
-          '
     ModelGeneration:
       description: End-to-end pipeline - generation (GLB) → slot conversions (USD, USDZ) → ready
       type: object
@@ -949,72 +874,36 @@ components:
         updatedAt:
           type: string
           format: date-time
-    Asset:
+    Model3DSlot:
       type: object
       required:
-      - id
-      - type
-      - contentType
-      - format
+      - status
       properties:
-        id:
-          type: string
-          description: Unique identifier for the asset
-        userId:
-          type: string
-          description: Unique identifier for the user who owns the asset
-        journeyId:
-          type: string
-          description: Optional journey association for the asset
-        type:
+        status:
           type: string
           enum:
-          - image
-          - model
-          - stamps
-          - video
-        contentType:
+          - submitted
+          - succeeded
+          - failed
+          - expired
+          description: Current status of the slot.
+        assetId:
           type: string
-          description: MIME type stored on the object (e.g., image/png, model/gltf-binary, application/octet-stream)
-        format:
+          description: Asset ID for the slot when status=succeeded.
+        lastError:
           type: string
-          description: Normalized format (lowercase, no dot), e.g., png, jpg, gif, glb, usdz
-        description:
-          type: string
-          description: Short human-readable name/description of the asset content (e.g., "Gold ring with diamond solitaire"), provided by generation pipelines.
-        createdAt:
+          description: Most recent terminal error (when status=failed).
+        expiresAt:
           type: string
           format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-        metadata:
-          type: object
-          description: Opaque, client-safe fields (server populated)
-          properties:
-            size:
-              type: integer
-              description: Size in bytes
-            hasThumbnail:
-              type: boolean
-              description: 'True when a thumbnail/preview still exists for this asset (video assets). Fetch it via GET /design/assets/{assetId}/download?variant=thumbnail.
-
-                '
-    CreateModel3DRequest:
+          description: When the slot will be automatically marked expired if not succeeded.
+    SubmitModelConversionsRequest:
       type: object
-      required:
-      - sourceAssetId
       properties:
-        sourceAssetId:
-          type: string
-          description: 'ID of an uploaded Asset (type=model) that seeds this Model. If format ∈ {usd, usdz, glb}, that slot is immediately marked succeeded. Other formats (e.g., obj, stl, ply, gltf) are retained as source-only attachments. On create, the server automatically enqueues conversions for any missing slots.
-
-            '
-    ModelGenerationResponse:
-      oneOf:
-      - $ref: '#/components/schemas/ModelGenerationSuccessResponse'
-      - $ref: '#/components/schemas/ModelGenerationErrorResponse'
-      description: Terminal payload for a model generation (success or error)
+        force:
+          type: boolean
+          default: false
+          description: If true, enqueue even if a slot is succeeded.
     ModelGenerationErrorResponse:
       type: object
       required:
@@ -1034,59 +923,29 @@ components:
         error:
           type: string
           description: Error message describing the failure reason.
-    SubmitModelConversionsRequest:
-      type: object
-      properties:
-        force:
-          type: boolean
-          default: false
-          description: If true, enqueue even if a slot is succeeded.
-    ImageOpsPromptRequest:
-      allOf:
-      - $ref: '#/components/schemas/ImageOpsRequestBase'
-      - type: object
-        required:
-        - source
-        - promptId
-        - planId
-        properties:
-          source:
-            type: string
-            enum:
-            - Prompt
-          promptId:
-            type: string
-            minLength: 1
-          planId:
-            type: string
-            minLength: 1
-          layerId:
-            type:
-            - string
-            - 'null'
-          stageId:
-            type: string
-            minLength: 1
-            description: 'Plan stage id for Prompt-source retries (e.g. regenerate after a failed image in stage review). Included in FIFO deduplication when present.
-
-              '
-    DesignPlanItem:
+    ModelGenerationResponse:
+      oneOf:
+      - $ref: '#/components/schemas/ModelGenerationSuccessResponse'
+      - $ref: '#/components/schemas/ModelGenerationErrorResponse'
+      description: Terminal payload for a model generation (success or error)
+    DesignPlanStage:
       type: object
       required:
-      - planId
-      - journeyId
-      - promptId
+      - stageId
       - status
-      - planThoughtReasoning
-      - planProposal
-      - planDeclaration
-      - stages
+      - generatedImages
+      - executionUpdate
+      - resultAnalysis
       properties:
-        planId:
+        stageId:
           type: string
-        journeyId:
+        generatedImages:
+          type: array
+          items:
+            $ref: '#/components/schemas/DesignPlanGeneratedImages'
+        executionUpdate:
           type: string
-        promptId:
+        resultAnalysis:
           type: string
         status:
           type: string
@@ -1095,19 +954,6 @@ components:
           - review
           - complete
           - failed
-        planThoughtReasoning:
-          type: array
-          description: The thought process and reasoning behind the design plan.
-          items:
-            type: string
-        planProposal:
-          type: string
-        planDeclaration:
-          type: string
-        stages:
-          type: array
-          items:
-            $ref: '#/components/schemas/DesignPlanStage'
     Image:
       deprecated: true
       description: This schema is deprecated and will be removed in the future. Please use the Asset schema instead.
@@ -1140,38 +986,6 @@ components:
             size:
               type: integer
               description: Image size in bytes.
-    DesignPlanStage:
-      type: object
-      required:
-      - stageId
-      - status
-      - generatedImages
-      - executionUpdate
-      - resultAnalysis
-      properties:
-        stageId:
-          type: string
-        generatedImages:
-          type: array
-          items:
-            $ref: '#/components/schemas/DesignPlanGeneratedImages'
-        executionUpdate:
-          type: string
-        resultAnalysis:
-          type: string
-        status:
-          type: string
-          enum:
-          - draft
-          - review
-          - complete
-          - failed
-    ImageOpsApiWorkflow:
-      type: string
-      enum:
-      - Upscale
-      - RemoveBackground
-      - RegenerateImage
     ModelGenerationSuccessResponse:
       type: object
       required:
@@ -1195,38 +1009,6 @@ components:
         glbAssetId:
           type: string
           description: The GLB asset produced by the generation step.
-    ImageOpsRequestBase:
-      type: object
-      description: Common fields for POST /design/journeys/{journeyId}/image-ops (see `ImageOpsRequest` oneOf).
-      required:
-      - workflow
-      - journeyId
-      properties:
-        workflow:
-          $ref: '#/components/schemas/ImageOpsApiWorkflow'
-        journeyId:
-          type: string
-          description: Must match the journeyId path parameter.
-        sourceAssetId:
-          type: string
-          description: 'Source image asset id. Required for Upscale, RemoveBackground, and Layer source. Optional for Prompt RegenerateImage when `stageId` is set (stage retry with no asset yet). Provide `imageLocation` instead when bypassing the asset table.
-
-            '
-        destinationAssetId:
-          type: string
-          format: uuid
-          description: 'Optional correlation id for async results. If omitted, the server assigns a UUID and returns it on the 202 Accepted body.
-
-            '
-        expirationTime:
-          type: string
-          format: date-time
-          description: Optional client expiry; server clamps to at most ~300s from receipt.
-        imageLocation:
-          $ref: '#/components/schemas/ImageLocation'
-          description: Optional override; otherwise resolved from sourceAssetId server-side.
-        generationId:
-          type: string
     ImageLocation:
       type: object
       required:
@@ -1237,6 +1019,12 @@ components:
           type: string
         s3Key:
           type: string
+    ImageOpsApiWorkflow:
+      type: string
+      enum:
+      - Upscale
+      - RemoveBackground
+      - RegenerateImage
     DesignPlanGeneratedImages:
       type: object
       required:
@@ -1244,72 +1032,6 @@ components:
       properties:
         assetId:
           type: string
-    ModelGenerationRequest:
-      description: 'Request payload for generating a model from an image. Model generations first create a GLB, then the system automatically enqueues conversions to USD and USDZ.
-
-        Use `imageSource: "layer"` when `imageAssetId` is a journey canvas image that is not necessarily listed on the prompt''s generated outputs (still requires `promptId` on the same journey for routing).
-
-        '
-      type: object
-      required:
-      - imageAssetId
-      properties:
-        promptId:
-          type: string
-          description: ID of the prompt that generated the image asset (optional for standalone generations)
-        imageAssetId:
-          type: string
-          description: ID of the image asset to be used in the model generation
-        imageSource:
-          type: string
-          enum:
-          - prompt
-          - layer
-          default: prompt
-          description: '`prompt` (default): `imageAssetId` must be one of this prompt''s generated image asset IDs.
-
-            `layer`: `imageAssetId` may be any image asset on the journey (e.g. canvas layer composite); ownership and journey checks still apply.
-
-            '
-        expirationTime:
-          type: string
-          format: date-time
-          description: Timestamp when the model generation request expires
-          readOnly: true
-    ImageOpsRequest:
-      oneOf:
-      - $ref: '#/components/schemas/ImageOpsLayerRequest'
-      - $ref: '#/components/schemas/ImageOpsPromptRequest'
-      - $ref: '#/components/schemas/ImageOpsLegacyRequest'
-      discriminator:
-        propertyName: source
-        mapping:
-          Layer: '#/components/schemas/ImageOpsLayerRequest'
-          Prompt: '#/components/schemas/ImageOpsPromptRequest'
-          Legacy: '#/components/schemas/ImageOpsLegacyRequest'
-    ImageOpsLayerRequest:
-      allOf:
-      - $ref: '#/components/schemas/ImageOpsRequestBase'
-      - type: object
-        required:
-        - source
-        - layerId
-        properties:
-          source:
-            type: string
-            enum:
-            - Layer
-          layerId:
-            type: string
-            minLength: 1
-          promptId:
-            type:
-            - string
-            - 'null'
-          planId:
-            type:
-            - string
-            - 'null'
     Model3D:
       type: object
       description: Three-slot 3D model with conversion status per slot.
@@ -1363,29 +1085,307 @@ components:
         updatedAt:
           type: string
           format: date-time
-    Model3DSlot:
+    ImageOpsRequestBase:
+      type: object
+      description: Common fields for POST /design/journeys/{journeyId}/image-ops (see `ImageOpsRequest` oneOf).
+      required:
+      - workflow
+      - journeyId
+      properties:
+        workflow:
+          $ref: '#/components/schemas/ImageOpsApiWorkflow'
+        journeyId:
+          type: string
+          description: Must match the journeyId path parameter.
+        sourceAssetId:
+          type: string
+          description: 'Source image asset id. Required for Upscale, RemoveBackground, and Layer source. Optional for Prompt RegenerateImage when `stageId` is set (stage retry with no asset yet). Provide `imageLocation` instead when bypassing the asset table.
+
+            '
+        destinationAssetId:
+          type: string
+          format: uuid
+          description: 'Optional correlation id for async results. If omitted, the server assigns a UUID and returns it on the 202 Accepted body.
+
+            '
+        expirationTime:
+          type: string
+          format: date-time
+          description: Optional client expiry; server clamps to at most ~300s from receipt.
+        imageLocation:
+          $ref: '#/components/schemas/ImageLocation'
+          description: Optional override; otherwise resolved from sourceAssetId server-side.
+        generationId:
+          type: string
+    ImageOpsPromptRequest:
+      allOf:
+      - $ref: '#/components/schemas/ImageOpsRequestBase'
+      - type: object
+        required:
+        - source
+        - promptId
+        - planId
+        properties:
+          source:
+            type: string
+            enum:
+            - Prompt
+          promptId:
+            type: string
+            minLength: 1
+          planId:
+            type: string
+            minLength: 1
+          layerId:
+            type:
+            - string
+            - 'null'
+          stageId:
+            type: string
+            minLength: 1
+            description: 'Plan stage id for Prompt-source retries (e.g. regenerate after a failed image in stage review). Included in FIFO deduplication when present.
+
+              '
+    ImageOpsLegacyRequest:
+      allOf:
+      - $ref: '#/components/schemas/ImageOpsRequestBase'
+      - type: object
+        required:
+        - source
+        - promptId
+        - sourceAssetId
+        properties:
+          source:
+            type: string
+            enum:
+            - Legacy
+          promptId:
+            type: string
+            minLength: 1
+            description: 'design-v2 prompt. sourceAssetId must be one entry from response.generatedImageIds (required when the prompt has multiple generated images).
+
+              '
+          workflow:
+            type: string
+            enum:
+            - Upscale
+            - RemoveBackground
+          sourceAssetId:
+            type: string
+            minLength: 1
+            description: 'Asset id of the specific generated image to transform. When generatedImageIds has multiple entries, this must be the id of the image the user selected.
+
+              '
+          imageLocation:
+            description: Must be null or omitted; pixels are resolved from sourceAssetId only.
+          layerId:
+            type:
+            - string
+            - 'null'
+          planId:
+            type:
+            - string
+            - 'null'
+          stageId:
+            type:
+            - string
+            - 'null'
+        description: 'design-v2 chat prompt image ops (upscale / remove background). RegenerateImage is not supported. Completion is published as prompt.legacy.* on the event bus.
+
+          '
+    ImageOpsRequest:
+      oneOf:
+      - $ref: '#/components/schemas/ImageOpsLayerRequest'
+      - $ref: '#/components/schemas/ImageOpsPromptRequest'
+      - $ref: '#/components/schemas/ImageOpsLegacyRequest'
+      discriminator:
+        propertyName: source
+        mapping:
+          Layer: '#/components/schemas/ImageOpsLayerRequest'
+          Prompt: '#/components/schemas/ImageOpsPromptRequest'
+          Legacy: '#/components/schemas/ImageOpsLegacyRequest'
+    ImageOpsAcceptedResponse:
+      type: object
+      properties:
+        journeyId:
+          type: string
+        workflow:
+          $ref: '#/components/schemas/ImageOpsApiWorkflow'
+        source:
+          type: string
+          enum:
+          - Layer
+          - Prompt
+          - Legacy
+        layerId:
+          type: string
+        promptId:
+          type: string
+        planId:
+          type: string
+        sourceAssetId:
+          type: string
+        destinationAssetId:
+          type: string
+          format: uuid
+          description: Correlation id for async result handlers (matches submission).
+        expirationTime:
+          type: string
+          format: date-time
+    DesignPlanItem:
       type: object
       required:
+      - planId
+      - journeyId
+      - promptId
       - status
+      - planThoughtReasoning
+      - planProposal
+      - planDeclaration
+      - stages
       properties:
+        planId:
+          type: string
+        journeyId:
+          type: string
+        promptId:
+          type: string
         status:
           type: string
           enum:
-          - submitted
-          - succeeded
+          - draft
+          - review
+          - complete
           - failed
-          - expired
-          description: Current status of the slot.
-        assetId:
+        planThoughtReasoning:
+          type: array
+          description: The thought process and reasoning behind the design plan.
+          items:
+            type: string
+        planProposal:
           type: string
-          description: Asset ID for the slot when status=succeeded.
-        lastError:
+        planDeclaration:
           type: string
-          description: Most recent terminal error (when status=failed).
-        expiresAt:
+        stages:
+          type: array
+          items:
+            $ref: '#/components/schemas/DesignPlanStage'
+    CreateModel3DRequest:
+      type: object
+      required:
+      - sourceAssetId
+      properties:
+        sourceAssetId:
+          type: string
+          description: 'ID of an uploaded Asset (type=model) that seeds this Model. If format ∈ {usd, usdz, glb}, that slot is immediately marked succeeded. Other formats (e.g., obj, stl, ply, gltf) are retained as source-only attachments. On create, the server automatically enqueues conversions for any missing slots.
+
+            '
+    Asset:
+      type: object
+      required:
+      - id
+      - type
+      - contentType
+      - format
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the asset
+        userId:
+          type: string
+          description: Unique identifier for the user who owns the asset
+        journeyId:
+          type: string
+          description: Optional journey association for the asset
+        type:
+          type: string
+          enum:
+          - image
+          - model
+          - stamps
+          - video
+        contentType:
+          type: string
+          description: MIME type stored on the object (e.g., image/png, model/gltf-binary, application/octet-stream)
+        format:
+          type: string
+          description: Normalized format (lowercase, no dot), e.g., png, jpg, gif, glb, usdz
+        description:
+          type: string
+          description: Short human-readable name/description of the asset content (e.g., "Gold ring with diamond solitaire"), provided by generation pipelines.
+        createdAt:
           type: string
           format: date-time
-          description: When the slot will be automatically marked expired if not succeeded.
+        updatedAt:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          description: Opaque, client-safe fields (server populated)
+          properties:
+            size:
+              type: integer
+              description: Size in bytes
+            hasThumbnail:
+              type: boolean
+              description: 'True when a thumbnail/preview still exists for this asset (video assets). Fetch it via GET /design/assets/{assetId}/download?variant=thumbnail.
+
+                '
+    ModelGenerationRequest:
+      description: 'Request payload for generating a model from an image. Model generations first create a GLB, then the system automatically enqueues conversions to USD and USDZ.
+
+        Use `imageSource: "layer"` when `imageAssetId` is a journey canvas image that is not necessarily listed on the prompt''s generated outputs (still requires `promptId` on the same journey for routing).
+
+        '
+      type: object
+      required:
+      - imageAssetId
+      properties:
+        promptId:
+          type: string
+          description: ID of the prompt that generated the image asset (optional for standalone generations)
+        imageAssetId:
+          type: string
+          description: ID of the image asset to be used in the model generation
+        imageSource:
+          type: string
+          enum:
+          - prompt
+          - layer
+          default: prompt
+          description: '`prompt` (default): `imageAssetId` must be one of this prompt''s generated image asset IDs.
+
+            `layer`: `imageAssetId` may be any image asset on the journey (e.g. canvas layer composite); ownership and journey checks still apply.
+
+            '
+        expirationTime:
+          type: string
+          format: date-time
+          description: Timestamp when the model generation request expires
+          readOnly: true
+    ImageOpsLayerRequest:
+      allOf:
+      - $ref: '#/components/schemas/ImageOpsRequestBase'
+      - type: object
+        required:
+        - source
+        - layerId
+        properties:
+          source:
+            type: string
+            enum:
+            - Layer
+          layerId:
+            type: string
+            minLength: 1
+          promptId:
+            type:
+            - string
+            - 'null'
+          planId:
+            type:
+            - string
+            - 'null'
   securitySchemes:
     bearerAuth:
       type: http

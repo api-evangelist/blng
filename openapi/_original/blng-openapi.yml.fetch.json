@@ -1,0 +1,12 @@
+{
+ "url": "https://users.blng.ai/swagger.yaml",
+ "final": "https://users.blng.ai/swagger.yaml",
+ "status": 200,
+ "content_type": "application/json",
+ "bytes": 135665,
+ "sha256": "fcbf6fcfecaee15ce42febfbfc18e301891f211bbce95101300802412acea1de",
+ "fetched_at": "2026-10-19",
+ "fetched_by": "APIEvangelist-Harvest/1.0 (+https://apievangelist.com)",
+ "match": "byte-identical",
+ "note": "re-archived: the provider's current document replaced a stale archive (roadmap#793); the old files are in openapi/_superseded/2026-10-19-stale"
+}

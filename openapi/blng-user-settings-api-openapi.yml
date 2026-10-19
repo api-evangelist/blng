@@ -1,0 +1,181 @@
+openapi: 3.2.0
+info:
+  title: User Settings API
+  description: Api to manage roles and permissions of users
+  version: 1.0.0
+tags:
+- name: User Settings
+paths:
+  /users/{userId}/settings:
+    get:
+      tags:
+      - User Settings
+      summary: Get the user's settings document
+      description: 'Returns the whole settings document plus the `version` used for the conditional write. One row per user, one explicitly typed schema, one version: defaults are applied for a user who has never written settings, so the shape is total and the client can PUT straight back what it read. Feature-gated per stage (USER_SETTINGS_LIBRARY_ENABLED, off in prod): when the flag is off every settings route answers 403 before touching data. Tooltip watched-state is NOT part of this document — it stays on the user record (tooltipFlowIdsViewed) and its existing /tooltips routes.'
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for the User (must be the caller)
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSettingsDocument'
+        '403':
+          description: Feature disabled for this environment, or caller is not the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      operationId: getUsersByUserIdSettings
+      x-operation-id-source: derived
+    put:
+      tags:
+      - User Settings
+      summary: Replace the user's settings document
+      description: 'Idempotent full replacement of the whole document — the client sends every field it wants persisted, so a change on one device is one write and one conflict rather than several interleaving section writes. Send the `version` from GET in `If-Match` (0 when the user has never written settings); a stale cross-tab or cross-device write answers 409. The body is strictly typed: a key this API does not name is a 400, not a silently stored attribute.'
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for the User (must be the caller)
+      - name: If-Match
+        in: header
+        required: true
+        description: Non-negative document version from GET settings (0 when unwritten). Sent bare or as a quoted entity tag; anything else is a 400, an empty header included. Typed as a string rather than an integer so a generated client is not made to reject the quoted forms the handler accepts.
+        schema:
+          type: string
+          pattern: ^(?:\d{1,15}|"\d{1,15}"|W/"\d{1,15}")$
+          example: '4'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserSettingsWrite'
+      responses:
+        '200':
+          description: The stored document, in the same shape GET returns
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSettingsDocument'
+        '400':
+          description: Invalid JSON, an unknown key, or a body that fails the schema
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Feature disabled for this environment, or caller is not the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: The document changed after the supplied version was read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      operationId: putUsersByUserIdSettings
+      x-operation-id-source: derived
+components:
+  schemas:
+    UserSettingsDocument:
+      type: object
+      description: The settings document as both routes return it; defaults applied when never written.
+      required:
+      - general
+      - version
+      additionalProperties: false
+      properties:
+        general:
+          $ref: '#/components/schemas/GeneralSettings'
+        version:
+          type: integer
+          minimum: 0
+          description: Send back in If-Match on the next PUT; 0 when the user has never written settings
+        updatedAt:
+          type: string
+          format: date-time
+          description: Absent until the first write
+    UserSettingsWrite:
+      type: object
+      description: The PUT body. `general` is required, so an empty body cannot silently reset settings.
+      required:
+      - general
+      additionalProperties: false
+      properties:
+        general:
+          $ref: '#/components/schemas/GeneralSettings'
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+    GeneralSettings:
+      type: object
+      description: 'The synced general settings, every field named explicitly — there is no free-form map, so an unknown key is a 400. Absent booleans default to true. Device-local state is deliberately out: the voice input device id is a per-device MediaDeviceInfo id and stays in client storage. Notification and tutorial state is postponed until a client consumes it, and lands as a new member of this document without a data migration.'
+      additionalProperties: false
+      properties:
+        smartFocus:
+          type: boolean
+          default: true
+          description: Editor auto-focus behaviour on the comparison view
+        snapping:
+          type: boolean
+          default: true
+          description: Whether an object is pulled onto an alignment while dragging
+        guideLines:
+          type: boolean
+          default: true
+          description: Whether the alignment overlay is drawn (independent of snapping)
+        voiceLanguage:
+          type: string
+          pattern: ^[A-Za-z0-9-]{2,32}$
+          description: Voice-dictation language id from the client's catalog ('en-US', 'zh-Hans', 'yue'). A bounded string rather than a server enum, so a newly shipped language does not need a backend deploy. Absent means "follow the browser's language".
+  securitySchemes:
+    cognitoUserAuth:
+      type: oauth2
+      description: Cognito authorization code flow for users
+      flows:
+        implicit:
+          authorizationUrl: https://auth.app.blng.ai/oauth2/authorize
+          scopes:
+            email: email
+            profile: profile
+            openid: openid
+            aws.cognito.signin.user.admin: aws.cognito.signin.user.admin
+    machineBearerToken:
+      type: http
+      description: 'Cognito authorization code flow for billing token, request token with command like `curl -X POST https://auth.app.blng.ai/oauth2/token -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=client_credentials&client_id=7arq76lejqmgq3qc556vr7rupn&client_secret=CLIENT_SECRET&scope=blng/billing"`
+
+        '
+      scheme: bearer
+      bearerFormat: JWT Access Token

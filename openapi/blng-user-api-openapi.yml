@@ -66,9 +66,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/User'
         '400':
-          description: Bad Request
+          description: 'Bad Request. Also returned with `{"message": "This name is reserved"}` when firstName, lastName or the combined name matches one of the assistant''s names (BLNG, BLNG AI, BLNG · AI, BLNG Assistant, BLNG AI Assistant, BLNG Bot). Names are compared after NFKD with combining marks removed, ignoring case, spacing, punctuation and invisible characters, with look-alike letters from other scripts (Cyrillic, Greek, Cherokee, Lisu, small capitals) read as their Latin counterparts and strokes such as l, 1 and | read as either l or I (Latin capital I always reads as I). Direction marks (U+200E, U+200F, U+061C) are ignored, and the words they separate are also checked in reverse order. Any name containing a text-direction override, embedding or isolate (U+202A-202E, U+2066-2069) is refused.'
         '404':
           description: User not found
+        '409':
+          description: 'Conflict, `{"message": "The profile changed while saving; please retry"}`. The name was changed by another request while this one was being checked, and the retries ran out. Retrying the request is safe.'
         '500':
           description: Internal Server Error
       operationId: putUsersByUserId
@@ -78,7 +80,7 @@ paths:
       tags:
       - User
       summary: Get marketing consent state and whether the one-time prompt is due
-      description: '`shouldPrompt` is true only for a live self-serve user who has neither answered nor been asked. Users in an enterprise workspace are never prompted: BLNG processes them under a customer DPA and has no standing to collect marketing consent from them. A user row that does not exist yet answers `{ "optIn": null, "shouldPrompt": false }` rather than an error.'
+      description: '`shouldPrompt` is true only for a live user who is still signing up and has neither answered nor been asked. A user row that does not exist yet answers `{ "optIn": null, "shouldPrompt": false }` rather than an error.'
       security:
       - cognitoUserAuth:
         - openid
@@ -88,6 +90,13 @@ paths:
         required: true
         schema:
           type: string
+      - name: include
+        in: query
+        required: false
+        description: Comma separated list of optional fields to resolve. `deliverable` costs a live HubSpot read, so it is not served unless asked for. An unknown value is ignored.
+        schema:
+          type: string
+        example: deliverable
       responses:
         '200':
           description: Success
@@ -137,7 +146,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: Account deleted, or the user is an enterprise workspace member
+          description: Account deleted
           content:
             application/json:
               schema:
@@ -277,6 +286,35 @@ paths:
       x-operation-id-source: derived
 components:
   schemas:
+    MarketingConsentReceipt:
+      type: object
+      description: Marketing opt-in receipt (GDPR consent provenance). Present only for users who made an explicit choice; optIn records that choice either way. Synced to HubSpot as the marketing_opt_in contact property. Absent for users who have never been asked or who dismissed the prompt.
+      required:
+      - optIn
+      - timestamp
+      - wordingVersion
+      - captureLocation
+      properties:
+        optIn:
+          type: boolean
+          description: The user's choice
+        timestamp:
+          type: string
+          format: date-time
+          description: When the choice was captured. Server-stamped; never accepted from the caller.
+        wordingVersion:
+          type: string
+          description: Version tag of the exact consent wording shown, so the receipt survives copy changes
+        captureLocation:
+          type: string
+          description: Which surface captured the choice. `email-unsubscribe` and `email-spam-complaint` are withdrawals the recipient made against mail we sent, the first through an unsubscribe link and the second by reporting it to their provider. Both are recorded from the CRM's own subscription-change events rather than through this API.
+          enum:
+          - signup
+          - first-login-prompt
+          - settings
+          - contact-sales
+          - email-unsubscribe
+          - email-spam-complaint
     PutMarketingConsentRequest:
       oneOf:
       - type: object
@@ -294,11 +332,13 @@ components:
             enum:
             - v1
             - v2
+            - v3
           captureLocation:
             type: string
             enum:
             - first-login-prompt
             - settings
+            - contact-sales
       - type: object
         description: The prompt was shown and closed without an answer
         required:
@@ -370,6 +410,26 @@ components:
           type: string
           format: date-time
           description: Timestamp of when the current period ends
+        billingInterval:
+          type: string
+          enum:
+          - month
+          - year
+          description: How often the plan fee is billed. Absent means month. The CU and Fast allowance resets monthly on every interval. Annual plans are not offered yet.
+        termStart:
+          type: string
+          format: date-time
+          description: Start of the current billing term (moves at each renewal). Monthly allowance periods count from allowanceAnchor when it is set, and from termStart only when it is not.
+        allowanceAnchor:
+          type: string
+          format: date-time
+          description: Stable instant the monthly allowance periods count from, set once per subscription and never moved by a renewal (Stripe billing_cycle_anchor, Apple originalPurchaseDate, or the Metronome contract start of a new subscribe). Each period is a whole number of months from it, clamped to month end per month from the anchor's own day. Only read for annual plans.
+        termEnd:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: End of the current billing term (renewal). Absent or null for a monthly Metronome contract.
         canceledAt:
           type: string
           format: date-time
@@ -403,34 +463,23 @@ components:
         shouldPrompt:
           type: boolean
           description: Whether the one-time consent prompt is due for this user
-    MarketingConsentReceipt:
-      type: object
-      description: Marketing opt-in receipt (GDPR consent provenance). Present only for users who made an explicit choice; optIn records that choice either way. Synced to HubSpot as the marketing_opt_in contact property. Absent for users who have never been asked or who dismissed the prompt.
-      required:
-      - optIn
-      - timestamp
-      - wordingVersion
-      - captureLocation
-      properties:
-        optIn:
-          type: boolean
-          description: The user's choice
-        timestamp:
-          type: string
-          format: date-time
-          description: When the choice was captured. Server-stamped; never accepted from the caller.
-        wordingVersion:
-          type: string
-          description: Version tag of the exact consent wording shown, so the receipt survives copy changes
-        captureLocation:
-          type: string
-          description: Which surface captured the choice. `email-unsubscribe` and `email-spam-complaint` are withdrawals the recipient made against mail we sent, the first through an unsubscribe link and the second by reporting it to their provider. Both are recorded from the CRM's own subscription-change events rather than through this API.
-          enum:
-          - signup
-          - first-login-prompt
-          - settings
-          - email-unsubscribe
-          - email-spam-complaint
+        deliverable:
+          type: object
+          description: The two gates HubSpot applies before delivering a marketing email, both of which must pass. Read live from the CRM, so this describes the mail rather than the recorded choice. Served only when asked for via `include=deliverable`.
+          required:
+          - marketingContact
+          - subscribed
+          properties:
+            marketingContact:
+              type:
+              - boolean
+              - 'null'
+              description: Whether the contact is a marketing contact. Null when it could not be read, which is not the same as false.
+            subscribed:
+              type:
+              - boolean
+              - 'null'
+              description: Whether the contact is subscribed to the marketing subscription. Null when it could not be read, which is not the same as false.
     Entitlements:
       type: object
       properties:
@@ -440,6 +489,32 @@ components:
         chatVisibilityWindowHrs:
           type: integer
           description: Maximum number of hours to let a user look back in chat history. -1 for unlimited.
+        upscaleAvailable:
+          type: boolean
+          description: Whether 4k upscale is available on this subscription.
+        exportWatermarkRequired:
+          type: boolean
+          description: Whether exports from this subscription must carry a visible "Made with BLNG" mark. The server computes the policy; whoever hands pixels out applies it, which today is the web and iOS clients at their export paths. Until the watermark launches (the runtime switch /design-app/<stage>/billing/export-watermark-enabled), this is false for every tier; once it is on, it is true for the Free tier and false for paid plans. An operator override on the subscription (entitlementOverrides.exportWatermarkRequired) wins over both.
+    Organization:
+      type: object
+      properties:
+        organizationId:
+          type: string
+          description: Unique identifier for the organization
+        name:
+          type: string
+          description: Name of the organization
+        stripeCustomerId:
+          type: string
+          description: Stripe customer ID
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the organization was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last update to organization
     User:
       type: object
       properties:
@@ -483,6 +558,11 @@ components:
           - NOT_SENT
           - IN_PROGRESS
           description: Status of the welcome email
+        welcomeEmailSentAt:
+          type: string
+          format: date-time
+          description: When the consumer welcome email was actually sent. Server-written only, set by a real send (never by a client update, and not for federated users, who are created with welcomeEmailStatus SENT without an email). Absent for accounts created before Sep 27, 2026.
+          readOnly: true
         tooltipFlowIdsViewed:
           type: array
           items:
@@ -507,26 +587,6 @@ components:
           enum:
           - true
           description: Present only while an account is still going through sign-up and has not resolved the marketing consent ask. Written by account creation, cleared by the first consent write, and absent on every row created before it was introduced. Not settable via any API.
-    Organization:
-      type: object
-      properties:
-        organizationId:
-          type: string
-          description: Unique identifier for the organization
-        name:
-          type: string
-          description: Name of the organization
-        stripeCustomerId:
-          type: string
-          description: Stripe customer ID
-        createdAt:
-          type: string
-          format: date-time
-          description: Timestamp of when the organization was created
-        updatedAt:
-          type: string
-          format: date-time
-          description: Timestamp of the last update to organization
   securitySchemes:
     cognitoUserAuth:
       type: oauth2

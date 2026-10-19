@@ -1,0 +1,550 @@
+openapi: 3.2.0
+info:
+  title: User Library API
+  description: Api to manage roles and permissions of users
+  version: 1.0.0
+tags:
+- name: User Library
+paths:
+  /users/{userId}/library:
+    get:
+      tags:
+      - User Library
+      summary: List the user's library items (paginated)
+      description: One full page of the caller's non-deleted library items. A kind-scoped page is newest-first by UUIDv7; an unfiltered page follows the full `kind-uuidv7` sort key and is therefore grouped by kind. Soft-deleted and internal counter rows are drained server-side rather than producing false empty pages. `totalCount` is the active count for the selected kind (or all kinds when unfiltered), maintained atomically with create/delete. `collectionVersion` is a non-negative, monotonically increasing snapshot version. The weak, query-scoped `ETag` binds that version to `kind`, `limit`, and `nextToken`; a matching `If-None-Match` returns 304. On 200, drain every page and restart the snapshot if its collectionVersion changes during pagination. Feature-gated per stage (USER_SETTINGS_LIBRARY_ENABLED, off in prod).
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for the User (must be the caller)
+      - name: kind
+        in: query
+        schema:
+          type: string
+          enum:
+          - brush
+          - palette
+          - filter
+          - preset
+          - canvas
+          - asset
+          - document
+          description: Restrict the page to one kind
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+      - name: nextToken
+        in: query
+        schema:
+          type: string
+          description: Opaque token from the previous response to fetch the next page
+      - name: If-None-Match
+        in: header
+        required: false
+        schema:
+          type: string
+        description: Optional weak, query-scoped cache validator from a previous response. An invalid validator is treated as a cache miss.
+      responses:
+        '200':
+          description: Success
+          headers:
+            ETag:
+              schema:
+                type: string
+              description: Weak validator for this exact kind, limit, nextToken, and collectionVersion.
+            Cache-Control:
+              schema:
+                type: string
+              example: private, no-cache, must-revalidate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LibraryItemPage'
+        '304':
+          description: The requested page is unchanged; response has no body.
+          headers:
+            ETag:
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+              example: private, no-cache, must-revalidate
+        '400':
+          description: Unknown kind, out-of-range limit, or an invalid or expired nextToken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Feature disabled for this environment, or caller is not the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: The collection changed repeatedly while reading; retry the request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      operationId: getUsersByUserIdLibrary
+      x-operation-id-source: derived
+    post:
+      tags:
+      - User Library
+      summary: Create a library item
+      description: 'Inline kinds (palette, filter, preset) send their content in `payload` (serialized size ≤ 64 KiB). Binary kinds (brush, canvas, asset, document) are upload-first: the client first uploads the file to journeys `POST /v2/design/assets/upload` with `scope: ''user''` (readable by the uploader only) and no journeyId (journeys `type` per kind: asset → `image`; brush, canvas and document → `document`, which accepts pdf, txt, md, csv, json, canvas json, zip and octet-stream), then creates this item with the returned id as `assetId` (plus an optional `thumbnailAssetId` for a separately uploaded preview) in one call. The item is usable immediately; there is no pending state and no completion step. `assetId` is an opaque reference to a journeys asset row owned by the same user: design-app never calls journeys and never verifies it, and journeys enforces ownership when the asset is read. Per-kind item quotas apply atomically (stage-configured, default 500). `clientId` is a required lowercase UUIDv7 idempotency identity. Reuse the same value for retries: a new item returns 201, while a replay returns 200 and the existing item. The stored id is `${kind}-${clientId}`, so a replay is matched on `kind` and `clientId` together and never on the body: sending a `clientId` already used for that kind answers 200 with the stored row and changes nothing, while reusing one `clientId` under two kinds creates two separate items. Mint a fresh `clientId` per item and use `PUT` to edit one that exists. A deleted or malformed colliding identity returns 409. This required field is an intentional pre-rollout contract change because the feature is disabled and has no current frontend consumer.'
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for the User (must be the caller)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LibraryItemCreateRequest'
+      responses:
+        '201':
+          description: The created catalogue item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LibraryItemCreateResponse'
+        '200':
+          description: Idempotent replay of an already-created item for the supplied clientId
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LibraryItemCreateResponse'
+        '400':
+          description: Invalid JSON, schema failure, or content fields that do not match the kind
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Feature disabled for this environment, or caller is not the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Per-kind quota, identity collision, or transient concurrent-write conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: Inline payload over 64 KiB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      operationId: postUsersByUserIdLibrary
+      x-operation-id-source: derived
+  /users/{userId}/library/{itemId}:
+    get:
+      tags:
+      - User Library
+      summary: Get one library item
+      description: The catalogue item row. Binary kinds expose the opaque journeys `assetId` and optional `thumbnailAssetId`; the client reads the asset through journeys, which enforces ownership. No download or upload URL is generated by design-app. Soft-deleted items answer 404.
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for the User (must be the caller)
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Library item id (`kind-uuid`)
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LibraryItemGetResponse'
+        '403':
+          description: Feature disabled for this environment, or caller is not the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Item not found (or soft-deleted)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      operationId: getUsersByUserIdLibraryByItemId
+      x-operation-id-source: derived
+    put:
+      tags:
+      - User Library
+      summary: Conditionally update an item
+      description: Requires `expectedVersion`, preventing stale writes. Renames any kind; `payload` replacement is inline kinds only. A binary kind is replaced by uploading the new file to journeys first and sending its id as a new `assetId` under the same public itemId; `thumbnailAssetId` may accompany it, and without one the previous preview is dropped. The previous journeys asset row is left as it is. `version` advances on every successful write, rename included, so the response carries the value the next PUT must send. The inline payload cap (64 KiB serialized) applies as at create time.
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for the User (must be the caller)
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Library item id (`kind-uuid`)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LibraryItemUpdateRequest'
+      responses:
+        '200':
+          description: The updated item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LibraryItemUpdateResponse'
+        '400':
+          description: Invalid JSON, schema failure, or a payload sent for a binary kind
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Feature disabled for this environment, or caller is not the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Item not found (or soft-deleted)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Stale expectedVersion, or a transient concurrent-write conflict; retry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: Replacement inline payload over 64 KiB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      operationId: putUsersByUserIdLibraryByItemId
+      x-operation-id-source: derived
+    delete:
+      tags:
+      - User Library
+      summary: Delete a library item (soft delete)
+      description: Marks the item deleted; it disappears from lists and reads, stops counting against the quota, and its `version` advances like any other write. Hard purge of the catalogue row is a follow-up; the journeys asset row behind a binary item is left as it is. Deleting an already-deleted item answers 404; a per-kind counter that refuses to decrement answers 409.
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Unique identifier for the User (must be the caller)
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          description: Library item id (`kind-uuid`)
+      responses:
+        '204':
+          description: Deleted
+        '403':
+          description: Feature disabled for this environment, or caller is not the user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Item not found (or already deleted)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: The per-kind active counter is out of step with the row, or a transient concurrent-write conflict; retry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      operationId: deleteUsersByUserIdLibraryByItemId
+      x-operation-id-source: derived
+components:
+  schemas:
+    LibraryItem:
+      type: object
+      description: 'One user library item. Inline kinds (palette, filter, preset) carry `payload`; binary kinds (brush, canvas, asset, document) carry an opaque journeys `assetId` and optional `thumbnailAssetId`, both uploaded by the same user with `scope: ''user''` (readable by the uploader only) before the item was created, so an item is usable as soon as it exists. `document` is an agent-readable context file (materials sheet, pricing PDF, harness/agent config) attached to chat — distinct from `asset`, a canvas-droppable image/texture. Journeys enforces ownership of asset ids when they are read; design-app does not verify them.'
+      required:
+      - ownerId
+      - itemId
+      - ownerType
+      - kind
+      - name
+      - version
+      - createdAt
+      - updatedAt
+      - createdBy
+      properties:
+        ownerId:
+          type: string
+          description: The owning user's id. (Generic name — a future org library adds workspace-owned items.)
+        itemId:
+          type: string
+          description: Public id and per-kind chronological sort key, `kind-uuidv7`
+        ownerType:
+          type: string
+          enum:
+          - user
+          - workspace
+          - space
+          description: Always `user` today; workspace/space are reserved for a future governed org library
+        kind:
+          type: string
+          enum:
+          - brush
+          - palette
+          - filter
+          - preset
+          - canvas
+          - asset
+          - document
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        payload:
+          description: Inline JSON content (non-binary kinds only), serialized size ≤ 64 KiB
+        assetId:
+          type: string
+          format: uuid
+          pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+          description: Binary kinds only; opaque id of the user-scoped journeys asset row backing the item
+          example: 3f3e5fc0-7bca-4a8e-9f0c-8bb1e237d88f
+        thumbnailAssetId:
+          type: string
+          format: uuid
+          pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+          description: Binary kinds only; opaque id of a user-scoped journeys asset row used as the preview
+          example: 90731c7d-6e73-49b0-a72e-b071484e29cb
+        version:
+          type: integer
+          minimum: 1
+          description: Optimistic-concurrency token. Starts at 1 and advances by one on every successful write (rename, payload change, asset replacement, soft delete). Send it back as `expectedVersion` on PUT; a mismatch is 409. Not a content revision.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+    LibraryItemPage:
+      type: object
+      description: One full page of library items plus the active matching count and snapshot version.
+      required:
+      - items
+      - totalCount
+      - collectionVersion
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LibraryItem'
+        totalCount:
+          type: integer
+          minimum: 0
+          description: Active items for the selected kind, or all kinds when the request is unfiltered
+        collectionVersion:
+          type: integer
+          minimum: 0
+          description: Non-negative collection snapshot version used to build this page and its ETag.
+        nextToken:
+          type: string
+          description: Present when more pages exist; pass as the nextToken query parameter
+    LibraryItemCreateRequest:
+      type: object
+      description: Inline kinds require `payload` and forbid asset ids; binary kinds require the `assetId` journeys returned for the already-uploaded file, forbid `payload`, and may carry a `thumbnailAssetId`. A mismatch answers 400. For kind=preset, payload must be an EffectPresetPayloadV1; palette and filter payloads remain generic inline JSON.
+      required:
+      - clientId
+      - kind
+      - name
+      additionalProperties: false
+      properties:
+        clientId:
+          type: string
+          pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$
+          description: Lowercase UUIDv7 identity generated once by the client and reused for retries.
+        kind:
+          type: string
+          enum:
+          - brush
+          - palette
+          - filter
+          - preset
+          - canvas
+          - asset
+          - document
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        payload:
+          description: Inline JSON content (non-binary kinds), serialized size ≤ 64 KiB. For kind=preset this must conform to EffectPresetPayloadV1; other inline kinds remain opaque JSON.
+        assetId:
+          type: string
+          format: uuid
+          pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+          description: Required for binary kinds; the id journeys returned for the uploaded user-scoped asset
+          example: 3f3e5fc0-7bca-4a8e-9f0c-8bb1e237d88f
+        thumbnailAssetId:
+          type: string
+          format: uuid
+          pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+          description: Optional id journeys returned for a separately uploaded user-scoped preview asset
+          example: 90731c7d-6e73-49b0-a72e-b071484e29cb
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+    LibraryItemUpdateRequest:
+      type: object
+      description: expectedVersion is required and must equal the item's current `version`. At least one of name / payload / assetId is required. payload is inline kinds only; assetId replaces a binary item's content with an asset the client has already uploaded to journeys; thumbnailAssetId requires assetId. When the stored item kind is preset, a replacement payload must conform to EffectPresetPayloadV1; other inline kinds remain opaque JSON.
+      required:
+      - expectedVersion
+      additionalProperties: false
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          description: The `version` the client last read; the write is refused with 409 if it has moved
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        payload:
+          description: Replacement inline JSON content, serialized size ≤ 64 KiB. For a stored preset, this must conform to EffectPresetPayloadV1; other inline kinds remain opaque JSON.
+        assetId:
+          type: string
+          format: uuid
+          pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+          description: Id of the already-uploaded user-scoped journeys asset that replaces the binary; must differ from the current id
+          example: cc6a3f9a-ec2e-446a-a202-17c75a4292f4
+        thumbnailAssetId:
+          type: string
+          format: uuid
+          pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$
+          description: Optional replacement preview asset id; valid only with assetId, and its absence drops the previous preview
+    LibraryItemCreateResponse:
+      type: object
+      required:
+      - item
+      properties:
+        item:
+          $ref: '#/components/schemas/LibraryItem'
+    LibraryItemGetResponse:
+      type: object
+      required:
+      - item
+      properties:
+        item:
+          $ref: '#/components/schemas/LibraryItem'
+    LibraryItemUpdateResponse:
+      type: object
+      required:
+      - item
+      properties:
+        item:
+          $ref: '#/components/schemas/LibraryItem'
+  securitySchemes:
+    cognitoUserAuth:
+      type: oauth2
+      description: Cognito authorization code flow for users
+      flows:
+        implicit:
+          authorizationUrl: https://auth.app.blng.ai/oauth2/authorize
+          scopes:
+            email: email
+            profile: profile
+            openid: openid
+            aws.cognito.signin.user.admin: aws.cognito.signin.user.admin
+    machineBearerToken:
+      type: http
+      description: 'Cognito authorization code flow for billing token, request token with command like `curl -X POST https://auth.app.blng.ai/oauth2/token -H "Content-Type: application/x-www-form-urlencoded" -d "grant_type=client_credentials&client_id=7arq76lejqmgq3qc556vr7rupn&client_secret=CLIENT_SECRET&scope=blng/billing"`
+
+        '
+      scheme: bearer
+      bearerFormat: JWT Access Token

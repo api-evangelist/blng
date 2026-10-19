@@ -275,6 +275,26 @@ apis:
     url: openapi/blng-workspace-api-openapi.yml
   - type: APIReference
     url: https://journeys.blng.ai/
+- aid: blng:blng-user-library-api
+  name: Blng User Library API
+  description: The User Library API from Blng — 2 operation(s) for user library.
+  humanURL: https://users.blng.ai/
+  baseURL: https://users.blng.ai
+  tags:
+  - User Library
+  properties:
+  - type: OpenAPI
+    url: openapi/blng-user-library-api-openapi.yml
+- aid: blng:blng-user-settings-api
+  name: Blng User Settings API
+  description: The User Settings API from Blng — 1 operation(s) for user settings.
+  humanURL: https://users.blng.ai/
+  baseURL: https://users.blng.ai
+  tags:
+  - User Settings
+  properties:
+  - type: OpenAPI
+    url: openapi/blng-user-settings-api-openapi.yml
 maintainers:
 - FN: Kin Lane
   email: kin@apievangelist.com

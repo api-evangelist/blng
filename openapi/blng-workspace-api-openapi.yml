@@ -63,7 +63,7 @@ paths:
     post:
       tags:
       - Workspace
-      summary: Create a team, enterprise, or enterprise-team workspace (creator becomes owner)
+      summary: Create a team or enterprise workspace (creator becomes owner)
       security:
       - cognitoUserAuth:
         - openid
@@ -154,7 +154,7 @@ paths:
     put:
       tags:
       - Workspace
-      summary: Update editable workspace fields (currently name only)
+      summary: Update editable workspace settings fields (name, picture); OWNER/ADMIN only
       security:
       - cognitoUserAuth:
         - openid
@@ -190,13 +190,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: Multi-tenancy disabled or insufficient role for update
+          description: Multi-tenancy disabled, insufficient role for update, allowGuestCompanySkills set to true on a workspace that is not Enterprise, or allowGuestCompanySkills sent by an external member
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Workspace not found for user (or workspace row missing)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: allowGuestCompanySkills was sent and another request changed its stored value between the read and the write, or turning it on found the workspace no longer Enterprise. Nothing was written; read the settings again and retry.
           content:
             application/json:
               schema:
@@ -310,7 +316,8 @@ paths:
     post:
       tags:
       - Workspace
-      summary: Invite a member by email (team, enterprise, enterprise-team only; owner/admin…
+      summary: Invite a member by email (team, enterprise only; owner/admin; only owners…
+      description: Only an OWNER may assign OWNER or BILLING_ADMIN; an ADMIN may assign ADMIN, EDITOR and VIEWER (403 otherwise). The requester's role is re-checked atomically with the invitation write, so a requester demoted or removed mid-request gets the same 403/404 as if the change had landed first.
       security:
       - cognitoUserAuth:
         - openid
@@ -346,7 +353,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: Multi-tenancy disabled, insufficient role, or workspace type does not support invitations (personal starter/pro/beta)
+          description: Multi-tenancy disabled, insufficient role, role not assignable by the requester (an ADMIN inviting OWNER or BILLING_ADMIN), or workspace type does not support invitations (personal starter/pro/beta)
           content:
             application/json:
               schema:
@@ -358,7 +365,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '409':
-          description: Pending invite exists or user already a member
+          description: Pending invite exists, user already a member, or the requester's membership changed while the request was in flight (retry)
           content:
             application/json:
               schema:
@@ -614,6 +621,7 @@ paths:
       tags:
       - Workspace
       summary: Accept a workspace invitation (authenticated; email must match; target must be…
+      description: The inviter is re-validated at acceptance. The invitation is refused (409) when the inviter is no longer an active OWNER or ADMIN, or when the inviter's current role can no longer grant the invited role. An OWNER or BILLING_ADMIN invitation sent by an ADMIN is refused this way; an OWNER has to invite again. The inviter check is part of the acceptance transaction, so an inviter demoted or removed mid-request also gets this 409 rather than a grant.
       security:
       - cognitoUserAuth:
         - openid
@@ -655,7 +663,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '409':
-          description: Invitation not pending, expired, already a member, invalid role, or transactional conflict (e.g. accepted concurrently in another session)
+          description: Invitation not pending, expired, already a member, invalid role, inviter can no longer invite or can no longer grant the invited role, or transactional conflict (e.g. accepted concurrently in another session)
           content:
             application/json:
               schema:
@@ -715,7 +723,8 @@ paths:
     put:
       tags:
       - Workspace
-      summary: Update a member role (owner/admin; owner-only rules for OWNER role)
+      summary: Update a member role (owner/admin; only owners assign or change OWNER and…
+      description: Only an OWNER may assign OWNER or BILLING_ADMIN; an ADMIN may assign ADMIN, EDITOR and VIEWER (403 otherwise). An ADMIN also cannot change the role of a member who is currently OWNER or BILLING_ADMIN. The write re-checks the requester's role and the member's current role atomically, so a change to either while the request is in flight returns the refusal that applies to the new state (403/404/409), not a 200.
       security:
       - cognitoUserAuth:
         - openid
@@ -756,7 +765,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: Multi-tenancy disabled or insufficient role
+          description: Multi-tenancy disabled, insufficient role, or an ADMIN assigning OWNER or BILLING_ADMIN or changing an OWNER or BILLING_ADMIN member
           content:
             application/json:
               schema:
@@ -768,7 +777,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '409':
-          description: Would remove the last workspace owner
+          description: Would remove the last workspace owner, the member is deactivated, or a membership changed while the request was in flight (retry)
           content:
             application/json:
               schema:
@@ -780,7 +789,8 @@ paths:
     delete:
       tags:
       - Workspace
-      summary: Remove a workspace member (owner/admin; owner-only removal of owners)
+      summary: Remove a workspace member (owner/admin; only owners remove OWNER and…
+      description: An ADMIN may remove ADMIN, EDITOR and VIEWER members. Only an OWNER may remove an OWNER or BILLING_ADMIN member (403 otherwise). The removal re-checks the requester's role and the member's current role atomically, so a change to either while the request is in flight returns the refusal that applies to the new state.
       security:
       - cognitoUserAuth:
         - openid
@@ -811,7 +821,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: Multi-tenancy disabled or insufficient role
+          description: Multi-tenancy disabled, insufficient role, or an ADMIN removing an OWNER or BILLING_ADMIN member
           content:
             application/json:
               schema:
@@ -823,7 +833,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '409':
-          description: Cannot remove the last workspace owner
+          description: Cannot remove the last workspace owner, or a membership changed while the request was in flight (retry)
           content:
             application/json:
               schema:
@@ -831,6 +841,50 @@ paths:
         '500':
           description: Internal Server Error
       operationId: deleteUsersByUserIdWorkspacesByWorkspaceIdMembersByMemberUserId
+      x-operation-id-source: derived
+  /users/{userId}/workspaces/{workspaceId}/settings:
+    get:
+      tags:
+      - Workspace
+      summary: Per-workspace settings read model (settings + caller role/permissions)
+      description: Readable by every active member of the workspace; the derived permissions tell the client which settings surfaces to render. Mutations remain role-gated on their own endpoints.
+      security:
+      - cognitoUserAuth:
+        - openid
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: workspaceId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkspaceSettingsResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Workspace not found for user (also returned while multi-tenancy is disabled)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+      operationId: getUsersByUserIdWorkspacesByWorkspaceIdSettings
       x-operation-id-source: derived
   /users/{userId}/workspaces/{workspaceId}/integrity:
     get:
@@ -1007,114 +1061,6 @@ paths:
       x-operation-id-source: derived
 components:
   schemas:
-    CreateWorkspaceInvitationRequest:
-      type: object
-      required:
-      - email
-      - role
-      properties:
-        email:
-          type: string
-          format: email
-        role:
-          type: string
-          enum:
-          - OWNER
-          - BILLING_ADMIN
-          - ADMIN
-          - EDITOR
-          - VIEWER
-    CreateWorkspaceRequest:
-      type: object
-      required:
-      - name
-      - type
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 120
-          description: Display name for the new workspace
-        type:
-          type: string
-          enum:
-          - team
-          - enterprise
-          - enterprise-team
-        parentWorkspaceId:
-          type: string
-          format: uuid
-          description: Required when type is enterprise-team; must be an enterprise workspace the user administers
-    UserWorkspaceSwitcherItem:
-      type: object
-      description: Per-membership workspace summary for the UI switcher. Returned by GET /users/{userId}/workspaces. Hydrated fields (name, type, etc.) may be omitted if the workspace row is missing.
-      required:
-      - workspaceId
-      - role
-      properties:
-        workspaceId:
-          type: string
-          format: uuid
-        role:
-          type: string
-          enum:
-          - OWNER
-          - BILLING_ADMIN
-          - ADMIN
-          - EDITOR
-          - VIEWER
-        memberType:
-          type: string
-          enum:
-          - sso_employee
-          - external
-          - federated_b2b2c
-        federatedIdpId:
-          type: string
-        name:
-          type: string
-          description: Workspace display name when the workspace record was found
-        type:
-          type: string
-          enum:
-          - starter
-          - pro
-          - team
-          - enterprise
-          - beta
-          - enterprise-team
-        subscriptionId:
-          type: string
-          format: uuid
-        subscriptionType:
-          type: string
-          description: Billing tier of the workspace's subscription, so the client can reflect the active workspace's plan.
-          enum:
-          - starter
-          - pro
-          - team
-          - enterprise
-          - beta
-        status:
-          type: string
-          description: Status of the workspace's subscription. Maps to stripe status.
-          enum:
-          - active
-          - canceled
-          - incomplete
-          - incomplete_expired
-          - paused
-          - past_due
-          - trialing
-          - unpaid
-        parentWorkspaceId:
-          type: string
-          format: uuid
-    ErrorResponse:
-      type: object
-      properties:
-        message:
-          type: string
     WorkspacePendingInvitationAdmin:
       type: object
       required:
@@ -1152,6 +1098,39 @@ components:
           type: string
         updatedAt:
           type: string
+    WorkspaceIntegrityReport:
+      type: object
+      required:
+      - workspaceId
+      - workspaceRowExists
+      - memberCount
+      - ownerCount
+      properties:
+        workspaceId:
+          type: string
+          format: uuid
+        workspaceRowExists:
+          type: boolean
+          description: Whether a workspace row exists for this id (false may indicate orphaned memberships)
+        memberCount:
+          type: integer
+          minimum: 0
+        ownerCount:
+          type: integer
+          minimum: 0
+        subscriptionIdOnWorkspace:
+          type: string
+          description: Present when the workspace row exists and has subscriptionId set
+    WorkspacePolicies:
+      type: object
+      description: 'The workspace policies, per-customer restrictions an operator sets in the management console, delivered in the same item as entitlements: a key is present only once an operator set it, and an empty object means nothing is set (or the workspace record was not found). Unknown keys and values that are not booleans are dropped. The client applies each policy''s meaning for an absent key. Not settable through PUT /users/{userId}/workspaces/{workspaceId}, which rejects the field.'
+      properties:
+        v3ui:
+          type: boolean
+          description: The v3 UI (the enterprise Spaces IA). On only when true on an enterprise workspace; absent means off.
+        voiceInput:
+          type: boolean
+          description: Voice dictation. Off only when false, when the voice gateway refuses the dictation socket; absent means on.
     MarketingConsentReceipt:
       type: object
       description: Marketing opt-in receipt (GDPR consent provenance). Present only for users who made an explicit choice; optIn records that choice either way. Synced to HubSpot as the marketing_opt_in contact property. Absent for users who have never been asked or who dismissed the prompt.
@@ -1178,13 +1157,33 @@ components:
           - signup
           - first-login-prompt
           - settings
+          - contact-sales
           - email-unsubscribe
           - email-spam-complaint
-    UpdateMembershipRoleRequest:
+    WorkspaceMembersList:
       type: object
       required:
-      - role
+      - members
+      description: Paginated list from GET .../workspaces/{workspaceId}/members
       properties:
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkspaceMembership'
+        nextToken:
+          type: string
+          description: Present when more pages exist; pass as the nextToken query parameter
+    UserWorkspaceSwitcherItem:
+      type: object
+      description: Per-membership workspace summary for the UI switcher. Returned by GET /users/{userId}/workspaces. Hydrated fields (name, type, etc.) may be omitted if the workspace row is missing.
+      required:
+      - workspaceId
+      - role
+      - workspacePolicies
+      properties:
+        workspaceId:
+          type: string
+          format: uuid
         role:
           type: string
           enum:
@@ -1193,38 +1192,76 @@ components:
           - ADMIN
           - EDITOR
           - VIEWER
-    WorkspaceInvitationPublic:
-      type: object
-      required:
-      - workspaceInvitationId
-      - workspaceId
-      - emailMasked
-      - inviteTarget
-      - status
-      - role
-      properties:
-        workspaceInvitationId:
-          type: string
-          format: uuid
-        workspaceId:
-          type: string
-          format: uuid
-        emailMasked:
-          type: string
-          description: Redacted invitee email for display; use GET .../email-match when authenticated to verify the signed-in account
-        inviteTarget:
+        memberType:
           type: string
           enum:
-          - new_user
-          - existing_user
+          - sso_employee
+          - external
+          - federated_b2b2c
+        federatedIdpId:
+          type: string
+        name:
+          type: string
+          description: Workspace display name when the workspace record was found
+        picture:
+          type: string
+          format: uuid
+          description: Workspace photo asset id; absent until an owner/admin sets one
+        type:
+          type: string
+          enum:
+          - starter
+          - pro
+          - team
+          - enterprise
+          - beta
+          - enterprise-team
+        subscriptionId:
+          type: string
+          format: uuid
+        subscriptionType:
+          type: string
+          description: Billing tier of the workspace's subscription, so the client can reflect the active workspace's plan.
+          enum:
+          - starter
+          - pro
+          - team
+          - enterprise
+          - beta
+        subscriptionTypeInForce:
+          type: string
+          description: 'The plan the workspace''s subscription puts in force now: a canceled or lapsed pro, team or enterprise subscription reads starter, beta stays beta. Same rule as the subscriptionType of GET /internal/workspaces/{workspaceId}/status. Absent when the subscription row was not found or its type is unknown.'
+          enum:
+          - starter
+          - pro
+          - team
+          - enterprise
+          - beta
         status:
           type: string
+          description: Status of the workspace's subscription. Maps to stripe status.
           enum:
-          - PENDING
-          - ACCEPTED
-          - REJECTED
-        role:
+          - active
+          - canceled
+          - incomplete
+          - incomplete_expired
+          - paused
+          - past_due
+          - trialing
+          - unpaid
+        entitlements:
+          allOf:
+          - $ref: '#/components/schemas/Entitlements'
+          description: Server-computed entitlements of the workspace's subscription (tier, lapse rules and operator overrides applied). Present when the subscription row was found. Read this for the active workspace instead of re-deriving from subscriptionType.
+        parentWorkspaceId:
           type: string
+          format: uuid
+        workspacePolicies:
+          $ref: '#/components/schemas/WorkspacePolicies'
+        v3ui:
+          type: boolean
+          deprecated: true
+          description: Deprecated, read workspacePolicies.v3ui with the workspace type. True when workspacePolicies.v3ui is true on an enterprise workspace; emitted for one release while clients move to workspacePolicies.
     WorkspaceInvitationCreated:
       type: object
       required:
@@ -1263,19 +1300,178 @@ components:
           type: string
           format: uri
           description: Canonical accept link (DESIGN_APP_WEB_ORIGIN + /workspace-invite/{id}); present when origin is configured so clients need not use window.location
-    WorkspaceMembersList:
+    UpdateWorkspaceRequest:
+      type: object
+      description: Partial update; at least one property must be present. Unknown properties are rejected.
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+          description: Workspace display name
+        picture:
+          type:
+          - string
+          - 'null'
+          format: uuid
+          description: 'Workspace photo asset id (a UUID from our own asset upload, same as the user avatar). URLs and data: URIs are rejected. Send null to remove the photo.'
+        allowGuestCompanySkills:
+          type: boolean
+          description: '"Let guests use company skills". OWNER/ADMIN only, and never an external member (403). Setting it to true needs an Enterprise workspace (403 on any other type); false is accepted on any tier so a stale value can be cleared. Unlocks company skills for guests (external members); never company memory.'
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+    CreateWorkspaceInvitationRequest:
       type: object
       required:
-      - members
-      description: Paginated list from GET .../workspaces/{workspaceId}/members
+      - email
+      - role
       properties:
-        members:
-          type: array
-          items:
-            $ref: '#/components/schemas/WorkspaceMembership'
-        nextToken:
+        email:
           type: string
-          description: Present when more pages exist; pass as the nextToken query parameter
+          format: email
+        role:
+          type: string
+          description: OWNER and BILLING_ADMIN are owner-only; an ADMIN inviter may invite ADMIN, EDITOR or VIEWER.
+          enum:
+          - OWNER
+          - BILLING_ADMIN
+          - ADMIN
+          - EDITOR
+          - VIEWER
+    WorkspaceSettingsResponse:
+      type: object
+      description: Per-workspace settings read model returned by GET /users/{userId}/workspaces/{workspaceId}/settings. One call returns the workspace profile, subscription linkage, the caller's own membership, and the capabilities derived from it, so a workspace-scoped settings surface renders without re-encoding the role matrix client-side.
+      required:
+      - workspace
+      - subscription
+      - caller
+      - permissions
+      properties:
+        workspace:
+          type: object
+          description: Read from the raw workspace row; any field that is missing or not in canonical form (legacy or out-of-band rows) is omitted rather than failing the request.
+          required:
+          - workspaceId
+          - allowGuestCompanySkills
+          properties:
+            workspaceId:
+              type: string
+              format: uuid
+            name:
+              type: string
+            picture:
+              type: string
+              format: uuid
+              description: Workspace photo asset id; absent until an owner/admin sets one
+            type:
+              type: string
+              enum:
+              - starter
+              - pro
+              - team
+              - enterprise
+              - beta
+              - enterprise-team
+            parentWorkspaceId:
+              type: string
+              format: uuid
+            createdAt:
+              type: string
+              format: date-time
+            allowGuestCompanySkills:
+              type: boolean
+              description: 'Effective "Let guests use company skills": true only on an Enterprise workspace whose row stores true; false otherwise, including when never set.'
+        subscription:
+          type: object
+          properties:
+            subscriptionId:
+              type: string
+              format: uuid
+            subscriptionType:
+              type: string
+              enum:
+              - starter
+              - pro
+              - team
+              - enterprise
+              - beta
+            status:
+              type: string
+              enum:
+              - active
+              - canceled
+              - incomplete
+              - incomplete_expired
+              - paused
+              - past_due
+              - trialing
+              - unpaid
+        caller:
+          type: object
+          required:
+          - role
+          properties:
+            role:
+              type: string
+              enum:
+              - OWNER
+              - BILLING_ADMIN
+              - ADMIN
+              - EDITOR
+              - VIEWER
+            memberType:
+              type: string
+              enum:
+              - sso_employee
+              - external
+              - federated_b2b2c
+            federatedIdpId:
+              type: string
+        permissions:
+          type: object
+          description: Capabilities derived server-side from the caller's role on this workspace.
+          required:
+          - canEditWorkspaceProfile
+          - canManageMembers
+          - canManageBilling
+          - canManageSso
+          - canManageGuestCompanySkills
+          properties:
+            canEditWorkspaceProfile:
+              type: boolean
+              description: Rename / photo (OWNER, ADMIN)
+            canManageMembers:
+              type: boolean
+              description: Invite, change roles, remove members (OWNER, ADMIN)
+            canManageBilling:
+              type: boolean
+              description: Plan / payment mutations (OWNER, BILLING_ADMIN)
+            canManageSso:
+              type: boolean
+              description: Rotate SAML config (OWNER/ADMIN on a federated workspace)
+            canManageGuestCompanySkills:
+              type: boolean
+              description: Toggle allowGuestCompanySkills (OWNER/ADMIN, never an external member) on an Enterprise workspace, or turn off a stale true on a workspace that left Enterprise
+    Entitlements:
+      type: object
+      properties:
+        maxJourneys:
+          type: integer
+          description: Maximum number of journeys allowed on a subscription. -1 for unlimited.
+        chatVisibilityWindowHrs:
+          type: integer
+          description: Maximum number of hours to let a user look back in chat history. -1 for unlimited.
+        upscaleAvailable:
+          type: boolean
+          description: Whether 4k upscale is available on this subscription.
+        exportWatermarkRequired:
+          type: boolean
+          description: Whether exports from this subscription must carry a visible "Made with BLNG" mark. The server computes the policy; whoever hands pixels out applies it, which today is the web and iOS clients at their export paths. Until the watermark launches (the runtime switch /design-app/<stage>/billing/export-watermark-enabled), this is false for every tier; once it is on, it is true for the Free tier and false for paid plans. An operator override on the subscription (entitlementOverrides.exportWatermarkRequired) wins over both.
     SetActiveWorkspaceRequest:
       type: object
       required:
@@ -1287,73 +1483,20 @@ components:
           - 'null'
           format: uuid
           description: Workspace to activate for the user; null clears active workspace.
-    User:
+    UpdateMembershipRoleRequest:
       type: object
+      required:
+      - role
       properties:
-        userId:
+        role:
           type: string
-          description: Unique identifier for the user
-        email:
-          type: string
-          description: Email of the user
-        firstName:
-          type: string
-          description: First name of the user
-        lastName:
-          type: string
-          description: Last name of the user
-        companyName:
-          type: string
-          description: Optional company name (app metadata, not auth)
-        profilePictureUrl:
-          type: string
-          description: Profile image URL (e.g. from federated IdP), synced on login
-        stripeCustomerId:
-          type: string
-          description: Stripe customer ID
-        createdAt:
-          type: string
-          format: date-time
-          description: Timestamp of when the user was created
-        updatedAt:
-          type: string
-          format: date-time
-          description: Timestamp of the last update to user
-        welcomeEmailSent:
-          type: boolean
-          description: Whether the welcome email has been sent
-          deprecated: true
-        welcomeEmailStatus:
-          type: string
+          description: OWNER and BILLING_ADMIN are owner-only; an ADMIN requester may set ADMIN, EDITOR or VIEWER.
           enum:
-          - SENT
-          - NOT_SENT
-          - IN_PROGRESS
-          description: Status of the welcome email
-        tooltipFlowIdsViewed:
-          type: array
-          items:
-            type: string
-          description: Id of all tooltip flows marked as viewed
-        activeWorkspaceId:
-          type: string
-          format: uuid
-          description: Current workspace context (multi-tenancy); set via PUT /users/{userId}/active-workspace
-        allowedWorkspaces:
-          type: integer
-          minimum: 1
-          description: 'Ops-only override (DynamoDB): max workspaces this user may own via POST /users/{userId}/workspaces. Omitted on normal users; overrides the stage default (typically 3). Not settable via public PUT /users.'
-        marketingConsent:
-          $ref: '#/components/schemas/MarketingConsentReceipt'
-        marketingConsentPromptedAt:
-          type: string
-          format: date-time
-          description: Set when the one-time consent prompt was shown and closed without an answer. Suppresses further prompting without recording a choice the user never made. Mutually exclusive with marketingConsent. Set via PUT /users/{userId}/marketing-consent.
-        signUpPending:
-          type: boolean
-          enum:
-          - true
-          description: Present only while an account is still going through sign-up and has not resolved the marketing consent ask. Written by account creation, cleared by the first consent write, and absent on every row created before it was introduced. Not settable via any API.
+          - OWNER
+          - BILLING_ADMIN
+          - ADMIN
+          - EDITOR
+          - VIEWER
     WorkspaceMembership:
       type: object
       description: Membership row (PK userId, SK workspaceId). Returned by GET /users/{userId}/memberships.
@@ -1399,39 +1542,126 @@ components:
         displayName:
           type: string
           description: Optional; derived from user first/last name when available
-    UpdateWorkspaceRequest:
+    CreateWorkspaceRequest:
       type: object
       required:
       - name
+      - type
       properties:
         name:
           type: string
           minLength: 1
           maxLength: 120
-          description: Workspace display name
-    WorkspaceIntegrityReport:
+          description: Display name for the new workspace
+        type:
+          type: string
+          enum:
+          - team
+          - enterprise
+    WorkspaceInvitationPublic:
       type: object
       required:
+      - workspaceInvitationId
       - workspaceId
-      - workspaceRowExists
-      - memberCount
-      - ownerCount
+      - emailMasked
+      - inviteTarget
+      - status
+      - role
       properties:
+        workspaceInvitationId:
+          type: string
+          format: uuid
         workspaceId:
           type: string
           format: uuid
-        workspaceRowExists:
-          type: boolean
-          description: Whether a workspace row exists for this id (false may indicate orphaned memberships)
-        memberCount:
-          type: integer
-          minimum: 0
-        ownerCount:
-          type: integer
-          minimum: 0
-        subscriptionIdOnWorkspace:
+        emailMasked:
           type: string
-          description: Present when the workspace row exists and has subscriptionId set
+          description: Redacted invitee email for display; use GET .../email-match when authenticated to verify the signed-in account
+        inviteTarget:
+          type: string
+          enum:
+          - new_user
+          - existing_user
+        status:
+          type: string
+          enum:
+          - PENDING
+          - ACCEPTED
+          - REJECTED
+        role:
+          type: string
+    User:
+      type: object
+      properties:
+        userId:
+          type: string
+          description: Unique identifier for the user
+        email:
+          type: string
+          description: Email of the user
+        firstName:
+          type: string
+          description: First name of the user
+        lastName:
+          type: string
+          description: Last name of the user
+        companyName:
+          type: string
+          description: Optional company name (app metadata, not auth)
+        profilePictureUrl:
+          type: string
+          description: Profile image URL (e.g. from federated IdP), synced on login
+        stripeCustomerId:
+          type: string
+          description: Stripe customer ID
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the user was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last update to user
+        welcomeEmailSent:
+          type: boolean
+          description: Whether the welcome email has been sent
+          deprecated: true
+        welcomeEmailStatus:
+          type: string
+          enum:
+          - SENT
+          - NOT_SENT
+          - IN_PROGRESS
+          description: Status of the welcome email
+        welcomeEmailSentAt:
+          type: string
+          format: date-time
+          description: When the consumer welcome email was actually sent. Server-written only, set by a real send (never by a client update, and not for federated users, who are created with welcomeEmailStatus SENT without an email). Absent for accounts created before Sep 27, 2026.
+          readOnly: true
+        tooltipFlowIdsViewed:
+          type: array
+          items:
+            type: string
+          description: Id of all tooltip flows marked as viewed
+        activeWorkspaceId:
+          type: string
+          format: uuid
+          description: Current workspace context (multi-tenancy); set via PUT /users/{userId}/active-workspace
+        allowedWorkspaces:
+          type: integer
+          minimum: 1
+          description: 'Ops-only override (DynamoDB): max workspaces this user may own via POST /users/{userId}/workspaces. Omitted on normal users; overrides the stage default (typically 3). Not settable via public PUT /users.'
+        marketingConsent:
+          $ref: '#/components/schemas/MarketingConsentReceipt'
+        marketingConsentPromptedAt:
+          type: string
+          format: date-time
+          description: Set when the one-time consent prompt was shown and closed without an answer. Suppresses further prompting without recording a choice the user never made. Mutually exclusive with marketingConsent. Set via PUT /users/{userId}/marketing-consent.
+        signUpPending:
+          type: boolean
+          enum:
+          - true
+          description: Present only while an account is still going through sign-up and has not resolved the marketing consent ask. Written by account creation, cleared by the first consent write, and absent on every row created before it was introduced. Not settable via any API.
   securitySchemes:
     cognitoUserAuth:
       type: oauth2

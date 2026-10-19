@@ -84,24 +84,6 @@ paths:
       x-operation-id-source: derived
 components:
   schemas:
-    Tooltip:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Unique id for the tooltip
-        name:
-          type: string
-          description: Name of the tooltip
-        icon:
-          type: string
-          description: Icon to show next to the title
-        title:
-          type: string
-          description: Title for the tooltip
-        description:
-          type: string
-          description: Contents for the tooltip
     TooltipRegistration:
       type: object
       properties:
@@ -135,13 +117,6 @@ components:
               type: object
             ipad:
               type: object
-    TooltipResponse:
-      type: object
-      properties:
-        tooltipFlows:
-          type: array
-          items:
-            $ref: '#/components/schemas/UserTooltipFlow'
     MarketingConsentReceipt:
       type: object
       description: Marketing opt-in receipt (GDPR consent provenance). Present only for users who made an explicit choice; optIn records that choice either way. Synced to HubSpot as the marketing_opt_in contact property. Absent for users who have never been asked or who dismissed the prompt.
@@ -168,8 +143,64 @@ components:
           - signup
           - first-login-prompt
           - settings
+          - contact-sales
           - email-unsubscribe
           - email-spam-complaint
+    Tooltip:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique id for the tooltip
+        name:
+          type: string
+          description: Name of the tooltip
+        icon:
+          type: string
+          description: Icon to show next to the title
+        title:
+          type: string
+          description: Title for the tooltip
+        description:
+          type: string
+          description: Contents for the tooltip
+    UserTooltipFlow:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique id for the flow
+        name:
+          type: string
+          description: Name of the flow
+        pages:
+          type: array
+          description: What pages/views the tooltip flow is designed for
+          items:
+            type: string
+        devices:
+          type: array
+          description: What devices the tooltip flow is designed for
+          items:
+            type: string
+            enum:
+            - web
+            - ios
+            - ipad
+        tooltipRegistrations:
+          type: array
+          items:
+            $ref: '#/components/schemas/TooltipRegistration'
+        seenByUser:
+          type: boolean
+          description: Whether this tooltip flow was seen by the user or not
+    TooltipResponse:
+      type: object
+      properties:
+        tooltipFlows:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserTooltipFlow'
     User:
       type: object
       properties:
@@ -213,6 +244,11 @@ components:
           - NOT_SENT
           - IN_PROGRESS
           description: Status of the welcome email
+        welcomeEmailSentAt:
+          type: string
+          format: date-time
+          description: When the consumer welcome email was actually sent. Server-written only, set by a real send (never by a client update, and not for federated users, who are created with welcomeEmailStatus SENT without an email). Absent for accounts created before Sep 27, 2026.
+          readOnly: true
         tooltipFlowIdsViewed:
           type: array
           items:
@@ -237,36 +273,6 @@ components:
           enum:
           - true
           description: Present only while an account is still going through sign-up and has not resolved the marketing consent ask. Written by account creation, cleared by the first consent write, and absent on every row created before it was introduced. Not settable via any API.
-    UserTooltipFlow:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Unique id for the flow
-        name:
-          type: string
-          description: Name of the flow
-        pages:
-          type: array
-          description: What pages/views the tooltip flow is designed for
-          items:
-            type: string
-        devices:
-          type: array
-          description: What devices the tooltip flow is designed for
-          items:
-            type: string
-            enum:
-            - web
-            - ios
-            - ipad
-        tooltipRegistrations:
-          type: array
-          items:
-            $ref: '#/components/schemas/TooltipRegistration'
-        seenByUser:
-          type: boolean
-          description: Whether this tooltip flow was seen by the user or not
   securitySchemes:
     cognitoUserAuth:
       type: oauth2

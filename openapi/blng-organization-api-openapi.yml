@@ -189,35 +189,6 @@ paths:
       x-operation-id-source: derived
 components:
   schemas:
-    Entitlements:
-      type: object
-      properties:
-        maxJourneys:
-          type: integer
-          description: Maximum number of journeys allowed on a subscription. -1 for unlimited.
-        chatVisibilityWindowHrs:
-          type: integer
-          description: Maximum number of hours to let a user look back in chat history. -1 for unlimited.
-    Organization:
-      type: object
-      properties:
-        organizationId:
-          type: string
-          description: Unique identifier for the organization
-        name:
-          type: string
-          description: Name of the organization
-        stripeCustomerId:
-          type: string
-          description: Stripe customer ID
-        createdAt:
-          type: string
-          format: date-time
-          description: Timestamp of when the organization was created
-        updatedAt:
-          type: string
-          format: date-time
-          description: Timestamp of the last update to organization
     Subscription:
       type: object
       properties:
@@ -279,6 +250,26 @@ components:
           type: string
           format: date-time
           description: Timestamp of when the current period ends
+        billingInterval:
+          type: string
+          enum:
+          - month
+          - year
+          description: How often the plan fee is billed. Absent means month. The CU and Fast allowance resets monthly on every interval. Annual plans are not offered yet.
+        termStart:
+          type: string
+          format: date-time
+          description: Start of the current billing term (moves at each renewal). Monthly allowance periods count from allowanceAnchor when it is set, and from termStart only when it is not.
+        allowanceAnchor:
+          type: string
+          format: date-time
+          description: Stable instant the monthly allowance periods count from, set once per subscription and never moved by a renewal (Stripe billing_cycle_anchor, Apple originalPurchaseDate, or the Metronome contract start of a new subscribe). Each period is a whole number of months from it, clamped to month end per month from the anchor's own day. Only read for annual plans.
+        termEnd:
+          type:
+          - string
+          - 'null'
+          format: date-time
+          description: End of the current billing term (renewal). Absent or null for a monthly Metronome contract.
         canceledAt:
           type: string
           format: date-time
@@ -293,6 +284,41 @@ components:
           type: string
           format: date-time
           description: Timestamp of the last update to subscription
+    Organization:
+      type: object
+      properties:
+        organizationId:
+          type: string
+          description: Unique identifier for the organization
+        name:
+          type: string
+          description: Name of the organization
+        stripeCustomerId:
+          type: string
+          description: Stripe customer ID
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of when the organization was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp of the last update to organization
+    Entitlements:
+      type: object
+      properties:
+        maxJourneys:
+          type: integer
+          description: Maximum number of journeys allowed on a subscription. -1 for unlimited.
+        chatVisibilityWindowHrs:
+          type: integer
+          description: Maximum number of hours to let a user look back in chat history. -1 for unlimited.
+        upscaleAvailable:
+          type: boolean
+          description: Whether 4k upscale is available on this subscription.
+        exportWatermarkRequired:
+          type: boolean
+          description: Whether exports from this subscription must carry a visible "Made with BLNG" mark. The server computes the policy; whoever hands pixels out applies it, which today is the web and iOS clients at their export paths. Until the watermark launches (the runtime switch /design-app/<stage>/billing/export-watermark-enabled), this is false for every tier; once it is on, it is true for the Free tier and false for paid plans. An operator override on the subscription (entitlementOverrides.exportWatermarkRequired) wins over both.
   securitySchemes:
     cognitoUserAuth:
       type: oauth2

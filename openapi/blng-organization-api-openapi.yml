@@ -338,3 +338,9 @@ components:
         '
       scheme: bearer
       bearerFormat: JWT Access Token
+x-provenance:
+  method: harvested
+  publisher: Blng
+  source: https://users.blng.ai/swagger.yaml
+  note: split by refine-openapis from the provider's own published document, verified by fetch (openapi/_original/*.fetch.json);
+    stamped by stamp-openapi-provenance.py (roadmap#793)

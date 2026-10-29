@@ -64,6 +64,154 @@
 > Full detail: **[Where this data comes from](https://apievangelist.com/about/where-our-data-comes-from)**
 <!-- API-EVANGELIST-PROVENANCE:END -->
 
-Blng is a company surfaced as a portfolio company of speedinvest and added to the API Evangelist network as a stub for enrichment. This profile is a lead awaiting the enrichment pipeline.
+BLNG is an AI-driven creative suite for the jewelry industry, giving jewelers, designers, brands, and retailers tools to explore, refine, and present designs fast and without compromise. Its Design product turns sketches, doodles, photos, illustrations, or text prompts into photorealistic renderings on web and iOS; Studio transforms CAD models into market-ready marketing photos and videos at scale; and Retail enables live, made-to-order design in-store. BLNG is a Speedinvest portfolio company. BLNG publishes no developer program, but the web application is backed by three first-party REST APIs whose OpenAPI definitions are served publicly and unauthenticated behind Swagger UI on its own hosts — a Journey API for design journeys, prompts, image assets and 3D model generation, a User API for users, workspaces, invitations, organizations and subscriptions, and a Billing API for Stripe-backed products, checkout and subscription webhooks. All three authenticate with AWS Cognito bearer tokens issued at auth.app.blng.ai.
 
-Backed by: speedinvest — https://blng.ai
+**Areas:** Company · Jewelry · Generative AI · Design · Creative Tools · Rendering · Marketing · Retail · 3D Models · Image Generation · Workspace · Billing
+
+## Blng on APIs.io
+
+Everything profiled for Blng is published on APIs.io rather than in this repository. Start at the provider page — **[apis.io/providers/blng/](https://apis.io/providers/blng/)** — or go straight to one of the APIs or properties below.
+
+### APIs (14)
+
+- [BLNG User API](https://apis.io/apis/blng/blng-user-api/) — REST API that manages BLNG users, roles and permissions, workspaces and workspace members, workspace and subscription invitations, organizations, SSO…
+- [BLNG Billing API](https://apis.io/apis/blng/blng-billing-api/) — REST API that manages BLNG payment and billing — listing Stripe products and prices, creating Stripe checkout sessions and customer-portal sessions,…
+- [Blng Chat Prompts API](https://apis.io/apis/blng/blng-chat-prompts-api/) — The Chat Prompts API from Blng — 2 operation(s) for chat prompts.
+- [Blng Composite API](https://apis.io/apis/blng/blng-composite-api/) — The Composite API from Blng — 2 operation(s) for composite.
+- [Blng Design Journey API](https://apis.io/apis/blng/blng-design-journey-api/) — The Design Journey API from Blng — 16 operation(s) for design journey.
+- [Blng Invitation API](https://apis.io/apis/blng/blng-invitation-api/) — The Invitation API from Blng — 5 operation(s) for invitation.
+- [Blng Journeys API](https://apis.io/apis/blng/blng-journeys-api/) — The Journeys API from Blng — 6 operation(s) for journeys.
+- [Blng Organization API](https://apis.io/apis/blng/blng-organization-api/) — The Organization API from Blng — 3 operation(s) for organization.
+- [Blng Prompts API](https://apis.io/apis/blng/blng-prompts-api/) — The Prompts API from Blng — 4 operation(s) for prompts.
+- [Blng Subscription API](https://apis.io/apis/blng/blng-subscription-api/) — The Subscription API from Blng — 4 operation(s) for subscription.
+- [Blng User Subscription API](https://apis.io/apis/blng/blng-user-subscription-api/) — The User Subscription API from Blng — 3 operation(s) for user subscription.
+- [Blng User Tooltip API](https://apis.io/apis/blng/blng-user-tooltip-api/) — The User Tooltip API from Blng — 2 operation(s) for user tooltip.
+- [Blng Webhook API](https://apis.io/apis/blng/blng-webhook-api/) — The Webhook API from Blng — 3 operation(s) for webhook.
+- [Blng Workspace API](https://apis.io/apis/blng/blng-workspace-api/) — The Workspace API from Blng — 15 operation(s) for workspace.
+
+### Published properties
+
+Each property below is a page on APIs.io carrying the machine-readable artifact and what it says.
+
+#### AsyncAPI (1)
+
+Event-driven and webhook contracts.
+
+- [Blng Webhooks](https://apis.io/asyncapis/blng/blng-webhooks/)
+
+#### MCP servers (1)
+
+Model Context Protocol servers that expose the API to agents.
+
+- [blng-mcp.yml](https://apis.io/servers/blng/blng-mcp-yml/)
+
+#### Agentic access (1)
+
+Which operations an agent can call, which act, and which need a human in the loop.
+
+- [Blng Agentic Access](https://apis.io/agentic-access/blng/blng-agentic-access/)
+
+#### Overlays (3)
+
+OpenAPI overlays, including conversational phrasing for each operation.
+
+- [Blng Billing Api Overlay](https://apis.io/overlays/blng/blng-billing-api-overlay/)
+- [Blng Journey Api Overlay](https://apis.io/overlays/blng/blng-journey-api-overlay/)
+- [Blng User Api Overlay](https://apis.io/overlays/blng/blng-user-api-overlay/)
+
+#### Security (3)
+
+Authentication, trust centre, and vulnerability disclosure.
+
+- [Blng Authentication](https://apis.io/security/blng/blng-authentication/)
+- [Blng Domain Security](https://apis.io/security/blng/blng-domain-security/)
+- [Blng Trust Center](https://apis.io/security/blng/blng-trust-center/)
+
+#### OAuth scopes (1)
+
+The permissions the API asks for.
+
+- [Blng Scopes](https://apis.io/scopes/blng/blng-scopes/)
+
+#### Plans and pricing (1)
+
+Published plans, tiers and prices.
+
+- [Blng Plans Pricing](https://apis.io/plans/blng/blng-plans-pricing/)
+
+#### Rate limits (1)
+
+Published request limits.
+
+- [Blng Rate Limits](https://apis.io/rate-limits/blng/blng-rate-limits/)
+
+## Where to find this API
+
+Links to the company's own pages. This repository publishes no copy of their specifications — the canonical document is theirs and lives at the URLs below.
+
+- [Website](https://blng.ai)
+- [Documentation](https://docs.blng.ai/)
+- [Getting started](https://docs.blng.ai/getting-started/)
+- [Pricing](https://blng.ai/pricing)
+- [Sign up](https://app.blng.ai/)
+- [Blog](https://blng.ai/news)
+- [Trust centre](https://trust.blng.ai/)
+- [Terms of service](https://blng.ai/terms)
+- [Privacy policy](https://blng.ai/privacy-policy)
+- [GitHub](https://github.com/blng-ai)
+- [Status](https://status.blng.ai/)
+
+## API Evangelist rating
+
+**Kin Score 50.5** — developing · rubric 0.25.0 · scored 2026-10-23
+
+| Facet | Score |
+|---|---|
+| Discoverability | 71.4 |
+| Contract quality | 49.7 |
+| Contract governance | 4.5 |
+| Operational transparency | 23.7 |
+| Developer ergonomics | 49.4 |
+| Access clarity | 71.1 |
+
+**Agent readiness 30.3** — agent-ready
+
+| Agent-readiness dimension | Result |
+|---|---|
+| Spec Presence | yes |
+| Agentic Access | derived (partial credit) |
+| Reversibility Documented | documented (partial credit) |
+| MCP Server | — |
+| Auth Clarity | bearer (partial credit) |
+| Idempotency | — |
+| Error Semantics | verified |
+| OpenAPI Examples | partial |
+| Rate Limit Signal | derived (partial credit) |
+| Event Surface Described | derived (partial credit) |
+| Agent Skills | derived (partial credit) |
+| Well Known Catalog | — |
+| Consent Identity | — |
+| Agent Card | — |
+| Dry Run Mode | — |
+| Delegated Identity | — |
+| Protected Resource Metadata | — |
+| Dynamic Client Registration | — |
+| Agentic Commerce | — |
+| Pagination Ratio | — |
+| Operation Distinctiveness | distinct |
+
+**Regulatory alignment 36.4** — AI & Biometrics
+
+The rubric is published at [github.com/api-evangelist/kin-score](https://github.com/api-evangelist/kin-score). The per-check breakdown behind these numbers — which checks were earned, partial or missed — along with score history and how this provider compares to its peers, is available at [apis.io/providers/blng/](https://apis.io/providers/blng/).
+
+## How this profile is made
+
+API Evangelist profiles a company's public API surface the way a developer would find it: the website, developer portal and documentation, the specifications it publishes, its public repositories, and its pricing, status and changelog pages. From that it derives the properties above — contracts split per API, workflows, schemas, collections, governance rules, plans and rate limits — and scores them against the published [Kin Score rubric](https://github.com/api-evangelist/kin-score).
+
+The artifacts are published on [APIs.io](https://apis.io), not in this repository. This repository is the public record for Blng: the place to say something is wrong, missing or out of date, and to ask for a re-score or a removal.
+
+## Open an issue
+
+- **Something about this listing** — a wrong description, a missing API, a stale artifact or a question about the rating: [open an issue on this repository](https://github.com/api-evangelist/blng/issues/new).
+- **A new API, or one that is not in the catalog yet** — [submit it on APIs.io](https://apis.io/add/).
+- **Anything else** — [the APIs.io inbox](https://github.com/api-search/inbox/issues/new) or [info@apievangelist.com](mailto:info@apievangelist.com).
